@@ -1,7 +1,7 @@
 // scripts/build-board.mjs
 // ─────────────────────────────────────────────────────────────────────────────
 // Board build script. Pure read + render. No writes to Notion.
-// Uses operational renderer v3.
+// Uses operational renderer v4.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import fs   from 'fs-extra';
@@ -10,7 +10,7 @@ import path from 'node:path';
 import { requireBoardConfig, cfg } from '../src/lib/config.mjs';
 import { createLogger } from '../src/lib/logger.mjs';
 import { fetchBoardData } from '../src/core/board-builder.mjs';
-import { renderBoard } from '../src/core/board-renderer-v3.mjs';
+import { renderBoard } from '../src/core/board-renderer-v4.mjs';
 
 const log = createLogger('build-board');
 
