@@ -64,8 +64,10 @@ async function handleDone(chatId, query, actor) {
   if (result.skipped) return `「${task.name}」已经是完成状态。`;
 
   boardDirty = true;
+  const ownerNote = task.owner ? `  负责人：${task.owner}` : '';
+  const dueNote   = task.due   ? `  截止：${task.due}`   : '';
   const matchNote = type === MATCH.CONTAINS ? `\n（按名称模糊匹配）` : '';
-  return `✅ <b>已完成</b>：${task.name}${matchNote}`;
+  return `✅ <b>已完成</b>：${task.name}${ownerNote}${dueNote}${matchNote}`;
 }
 
 async function handleBlock(chatId, query, reason, actor) {
@@ -90,7 +92,7 @@ async function handleBlock(chatId, query, reason, actor) {
   if (!result.ok) return transitionError(task, 'Blocked');
 
   boardDirty = true;
-  return `🚨 <b>已记录阻塞</b>：${task.name}\n原因：${reason.trim()}\n\nFounder 已可在看板看到此阻塞项。`;
+  return `🚨 <b>已记录阻塞</b>：${task.name}\n⚠️ 原因：${reason.trim()}\n看板将在5分钟内更新。`;
 }
 
 async function handleActivate(chatId, query, actor) {
@@ -110,7 +112,7 @@ async function handleActivate(chatId, query, actor) {
   if (result.skipped) return `「${task.name}」已经是进行中状态。`;
 
   boardDirty = true;
-  return `▶️ <b>已激活</b>：${task.name}\n阻塞已解除，状态恢复为进行中。`;
+  return `▶️ <b>已激活</b>：${task.name}\n阻塞已解除，继续进行中。`;
 }
 
 async function handleProgress(chatId, query) {
@@ -126,15 +128,16 @@ async function handleProgress(chatId, query) {
     Blocked:'已阻塞', Pending:'未开始',
   };
 
-  const code = task.taskCode ? `\nTaskCode：${task.taskCode}` : '';
-  let msg = `📋 <b>${task.name}</b>${code}`;
-  msg += `\n状态：${statusMap[task.status] || task.status}`;
-  if (task.phase)     msg += `\n阶段：${task.phase}`;
-  if (task.module)    msg += `\n模块：${task.module}`;
-  if (task.owner)     msg += `\n负责人：${task.owner}`;
-  if (task.due)       msg += `\n截止：${task.due}`;
-  if (task.blockedBy) msg += `\n🚨 阻塞原因：${task.blockedBy}`;
-  if (task.output)    msg += `\n输出物：${task.output}`;
+  const statusIcon = { Done:'✅', Active:'🔄', Blocked:'🚨', Draft:'📝', Pending:'⏳' }[task.status] || '📋';
+  const statusText = statusMap[task.status] || task.status;
+  const code = task.taskCode ? ` [${task.taskCode}]` : '';
+  let msg = `${statusIcon} <b>${task.name}</b>${code}\n状态：${statusText}`;
+  if (task.owner) msg += `  负责人：${task.owner}`;
+  if (task.due)   msg += `  截止：${task.due}`;
+  if (task.phase) msg += `\n阶段：${task.phase}`;
+  if (task.module) msg += `  模块：${task.module}`;
+  if (task.blockedBy && task.status === 'Blocked') msg += `\n⚠️ 阻塞原因：${task.blockedBy}`;
+  if (task.output) msg += `\n📄 输出物：${task.output}`;
   return msg;
 }
 
