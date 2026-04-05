@@ -3,8 +3,10 @@ import path from 'path'
 import { renderBoard } from '../src/core/board-renderer-v5.mjs'
 
 const DATA_PATH = './data.json'
+const OUTPUT_DIR = './dist'
+const OUTPUT_FILE = './dist/index.html'
 
-// 👇 fallback 数据（关键）
+// fallback 数据
 const fallbackData = {
   tasks: [],
   phases: [],
@@ -20,13 +22,23 @@ function loadData() {
   }
 }
 
+function ensureDist() {
+  if (!fs.existsSync(OUTPUT_DIR)) {
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true })
+  }
+}
+
 function main() {
   const data = loadData()
 
   const html = renderBoard(data)
 
-  fs.writeFileSync('./dist/index.html', html)
-  console.log('✅ Board built')
+  // ✅ 关键：先创建目录
+  ensureDist()
+
+  fs.writeFileSync(OUTPUT_FILE, html)
+
+  console.log('✅ Board built successfully')
 }
 
 main()
