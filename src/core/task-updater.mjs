@@ -34,12 +34,12 @@ export function canTransition(fromStatus, toStatus) {
 export function transitionError(task, toStatus) {
   const s = task.status;
   if (s === 'Draft') {
-    return `「${task.name}」is still <b>Draft</b> and awaiting Founder approval.\nStatus cannot be changed until approved.`;
+    return `「${task.name}」仍为 <b>草案 Draft</b>，等待 Founder 审批。\n审批前无法更改状态。`;
   }
   if (s === 'Done') {
-    return `「${task.name}」is already <b>Done</b>. No further status changes allowed.`;
+    return `「${task.name}」已完成 <b>Done</b>，不允许再次修改状态。`;
   }
-  return `Cannot change「${task.name}」from <b>${s}</b> to <b>${toStatus}</b>.`;
+  return `「${task.name}」当前状态为 <b>${s}</b>，无法变更为 <b>${toStatus}</b>。`;
 }
 
 // ── Update with dedup ─────────────────────────────────────────────────────
@@ -67,13 +67,26 @@ export async function updateTaskStatus(task, toStatus, blockedBy, actor) {
     Status: { select: { name: toStatus } },
   };
 
-  if (typeof blockedBy === 'string') {
-    properties['BlockedBy'] = { rich_text: richText(blockedBy) };
-  }
-
-  // Clear BlockedBy when unblocking
-  if (toStatus === 'Active' && task.status === 'Blocked') {
+  // ── Invariant enforcement ──────────────────────────────────────────────
+  // Invariant 1: Done tasks MUST have empty BlockedBy
+  if (toStatus === 'Done') {
     properties['BlockedBy'] = { rich_text: [] };
+    if (task.blockedBy) {
+      log.info(`Clearing BlockedBy on Done transition`, { task: task.name });
+    }
+  }
+  // Invariant 2: Active tasks MUST have empty BlockedBy
+  else if (toStatus === 'Active') {
+    properties['BlockedBy'] = { rich_text: [] };
+  }
+  // Invariant 3: Blocked MUST have a non-empty reason
+  else if (toStatus === 'Blocked') {
+    const reason = typeof blockedBy === 'string' ? blockedBy.trim() : '';
+    if (!reason) {
+      log.warn(`Block attempted without reason`, { task: task.name });
+      return { ok: false, reason: 'missing_block_reason' };
+    }
+    properties['BlockedBy'] = { rich_text: richText(reason) };
   }
 
   await notion.updatePage(task.id, properties, `updateTask:${task.id.slice(0,8)}`);

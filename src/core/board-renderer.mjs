@@ -24,7 +24,7 @@ function statusCls(s) {
 
 function badge(s) {
   const cls = statusCls(s);
-  const labels = { Draft:'Draft', Active:'Active', Done:'Done', Blocked:'Blocked', Pending:'Pending' };
+  const labels = { Draft:'Draft 待审批', Active:'Active 进行中', Done:'Done 已完成', Blocked:'Blocked 阻塞', Pending:'Pending 未开始' };
   return `<span class="badge badge--${cls}">${esc(labels[s] || s || 'Pending')}</span>`;
 }
 
@@ -33,12 +33,12 @@ function badge(s) {
 function renderSummaryBar(summary) {
   return `
 <div class="summary-bar">
-  <span class="sb-item"><span class="sb-num">${summary.totalTasks}</span><span class="sb-lbl">total</span></span>
+  <span class="sb-item"><span class="sb-num">${summary.totalTasks}</span><span class="sb-lbl">总任务</span></span>
   <span class="sb-sep"></span>
-  <span class="sb-item sb-done"><span class="sb-num">${summary.totalDone}</span><span class="sb-lbl">done</span></span>
-  <span class="sb-item sb-active"><span class="sb-num">${summary.totalActive}</span><span class="sb-lbl">active</span></span>
-  <span class="sb-item sb-blocked"><span class="sb-num">${summary.totalBlocked}</span><span class="sb-lbl">blocked</span></span>
-  ${summary.totalDraft ? `<span class="sb-item sb-draft"><span class="sb-num">${summary.totalDraft}</span><span class="sb-lbl">draft</span></span>` : ''}
+  <span class="sb-item sb-done"><span class="sb-num">${summary.totalDone}</span><span class="sb-lbl">已完成</span></span>
+  <span class="sb-item sb-active"><span class="sb-num">${summary.totalActive}</span><span class="sb-lbl">进行中</span></span>
+  <span class="sb-item sb-blocked"><span class="sb-num">${summary.totalBlocked}</span><span class="sb-lbl">阻塞</span></span>
+  ${summary.totalDraft ? `<span class="sb-item sb-draft"><span class="sb-num">${summary.totalDraft}</span><span class="sb-lbl">待审批</span></span>` : ''}
 </div>`;
 }
 
@@ -59,11 +59,11 @@ function renderBlocked(allBlocked) {
 <section class="blocked-section">
   <div class="blocked-header">
     <span class="blocked-dot"></span>
-    <span class="blocked-title">Blocked — ${allBlocked.length} item${allBlocked.length !== 1 ? 's' : ''}</span>
+    <span class="blocked-title">阻塞项 Blocked — ${allBlocked.length} 项</span>
   </div>
   <div class="blocked-scroll">
     <table class="blocked-table">
-      <thead><tr><th>Task</th><th>Module</th><th>Owner</th><th>Due</th><th>Blocked by</th></tr></thead>
+      <thead><tr><th>任务 Task</th><th>模块</th><th>负责人</th><th>截止</th><th>阻塞原因</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>
@@ -88,10 +88,10 @@ function renderTaskChips(ph) {
   return `
 <div class="task-chips">
   <span class="chip-label">Tasks</span>
-  ${ph.done    ? `<span class="chip chip--done">${ph.done} done</span>` : ''}
-  ${ph.active  ? `<span class="chip chip--active">${ph.active} active</span>` : ''}
-  ${ph.blocked ? `<span class="chip chip--blocked">${ph.blocked} blocked</span>` : ''}
-  ${ph.draft   ? `<span class="chip chip--draft">${ph.draft} draft</span>` : ''}
+  ${ph.done    ? `<span class="chip chip--done">${ph.done} 已完成</span>` : ''}
+  ${ph.active  ? `<span class="chip chip--active">${ph.active} 进行中</span>` : ''}
+  ${ph.blocked ? `<span class="chip chip--blocked">${ph.blocked} 阻塞</span>` : ''}
+  ${ph.draft   ? `<span class="chip chip--draft">${ph.draft} 待审批</span>` : ''}
 </div>`;
 }
 
@@ -114,7 +114,7 @@ function renderPhase(ph) {
   <div class="milestones">
     ${ph.milestones.length
       ? ph.milestones.map(renderMilestone).join('')
-      : '<div class="no-ms">No milestones defined</div>'}
+      : '<div class="no-ms">暂无里程碑 No milestones</div>'}
   </div>
   ${renderTaskChips(ph)}
 </section>`;
@@ -313,11 +313,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Ar
   </div>
 
   <div class="legend">
-    <span class="leg"><span class="leg-dot ld-done"></span>Done</span>
-    <span class="leg"><span class="leg-dot ld-active"></span>Active</span>
-    <span class="leg"><span class="leg-dot ld-blocked"></span>Blocked</span>
-    <span class="leg"><span class="leg-dot ld-pending"></span>Pending</span>
-    <span class="leg"><span class="leg-dot ld-draft"></span>Draft (awaiting approval)</span>
+    <span class="leg"><span class="leg-dot ld-done"></span>Done 已完成</span>
+    <span class="leg"><span class="leg-dot ld-active"></span>Active 进行中</span>
+    <span class="leg"><span class="leg-dot ld-blocked"></span>Blocked 阻塞</span>
+    <span class="leg"><span class="leg-dot ld-pending"></span>Pending 未开始</span>
+    <span class="leg"><span class="leg-dot ld-draft"></span>Draft 待审批</span>
   </div>
 
   ${renderBlocked(allBlocked)}

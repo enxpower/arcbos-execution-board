@@ -66,14 +66,14 @@ export async function fetchBoardData() {
 
     const done    = ts.filter(t => t.status === 'Done').length;
     const active  = ts.filter(t => t.status === 'Active').length;
-    const blocked = ts.filter(t => t.status === 'Blocked' || t.blockedBy).length;
+    const blocked = ts.filter(t => t.status === 'Blocked').length;
     const draft   = ts.filter(t => t.status === 'Draft').length;
     const pct     = ts.length ? Math.round((done / ts.length) * 100) : 0;
 
     return { ...ph, milestones: ms, tasks: ts, pct, done, active, blocked, draft, total: ts.length };
   });
 
-  const allBlocked = tasks.filter(t => t.status === 'Blocked' || t.blockedBy);
+  const allBlocked = tasks.filter(t => t.status === 'Blocked');
   const totalDone  = tasks.filter(t => t.status === 'Done').length;
   const totalActive = tasks.filter(t => t.status === 'Active').length;
 
