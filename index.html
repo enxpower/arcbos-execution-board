@@ -1,191 +1,343 @@
 <!doctype html>
 <html lang="zh-CN">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ARCBOS SnowBot — Project Board</title>
 <meta name="robots" content="noindex,nofollow">
 <style>
-:root{--bg:#f6f7fb;--card:#fff;--line:#e8ebf2;--text:#172033;--muted:#6b7280;--blue:#2563eb;--green:#16a34a;--red:#dc2626;--orange:#f97316;--amber:#d97706;--shadow:0 10px 30px rgba(16,24,40,.06)}
-*{box-sizing:border-box}html{font-size:15px}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
-a{color:inherit;text-decoration:none}.wrap{max-width:1280px;margin:0 auto;padding:28px 18px 56px}
-.header{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;margin-bottom:20px}.title h1{margin:0 0 6px;font-size:30px;line-height:1.1}.title p{margin:0;color:var(--muted)}.sync{color:var(--muted);font-size:13px;text-align:right}
-.hero-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:18px}.hero-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}.hero-num{font-size:30px;font-weight:800;line-height:1}.hero-lbl{margin-top:8px;font-size:13px;color:var(--muted)}.hero-lbl span{color:var(--text)}.hero-card--blocked .hero-num{color:var(--red)}.hero-card--overdue .hero-num{color:var(--orange)}.hero-card--risk .hero-num{color:var(--amber)}.hero-card--active .hero-num{color:var(--blue)}.hero-card--done .hero-num{color:var(--green)}
-.section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}.section-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}.section-hd.compact{margin-bottom:10px}.section-hd h2{margin:0 0 4px;font-size:20px}.section-hd p{margin:0;color:var(--muted);font-size:13px}.section-count{min-width:48px;height:48px;border-radius:12px;background:#eef2ff;color:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:800}
-.attention-list{display:grid;gap:12px}.attention-item{display:flex;justify-content:space-between;gap:14px;border:1px solid var(--line);border-left-width:4px;border-radius:14px;padding:14px;background:#fcfcfe}.attention-item--blocked{border-left-color:var(--red)}.attention-item--overdue{border-left-color:var(--orange)}.attention-item--atrisk{border-left-color:var(--amber)}.attention-title{font-weight:700;margin-bottom:8px}.attention-meta{display:flex;flex-wrap:wrap;gap:8px}.attention-problem{min-width:210px;max-width:320px;color:#7c2d12;font-weight:600;font-size:13px}.meta-tag{background:#f3f4f6;border-radius:999px;padding:4px 8px;font-size:12px;color:#374151}.meta-tag--warn{background:#fff7ed;color:#9a3412}
-.controls-bar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.filter-group{display:flex;gap:8px;flex-wrap:wrap}.filter-btn,.owner-card,.owner-link{cursor:pointer;border:none}.filter-btn{background:#f3f4f6;color:#374151;padding:9px 12px;border-radius:999px;font-weight:700}.filter-btn.is-active{background:#111827;color:#fff}.search-input{min-width:260px;max-width:340px;width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:#fff}
-.table-wrap{overflow:auto}.task-table{width:100%;border-collapse:collapse;min-width:980px}.task-table th{text-align:left;font-size:12px;letter-spacing:.03em;color:var(--muted);padding:11px 10px;border-bottom:1px solid var(--line);text-transform:uppercase}.task-table td{padding:13px 10px;border-bottom:1px solid var(--line);vertical-align:top}.task-table tbody tr:hover{background:#fafbff}.col-task a{font-weight:700}.task-code{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:999px;background:#eef2ff;color:#3730a3;font-family:ui-monospace,monospace;font-size:12px}.problem-cell{max-width:240px;color:#7c2d12;font-weight:600;font-size:13px}
-.badge,.risk{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:700}.badge--done{background:#dcfce7;color:#166534}.badge--active{background:#dbeafe;color:#1d4ed8}.badge--blocked{background:#fee2e2;color:#991b1b}.badge--draft,.badge--pending{background:#f3f4f6;color:#4b5563}.risk--blocked{background:#fee2e2;color:#991b1b}.risk--overdue{background:#ffedd5;color:#9a3412}.risk--atrisk{background:#fef3c7;color:#92400e}.risk--active{background:#dbeafe;color:#1d4ed8}.risk--done{background:#dcfce7;color:#166534}.risk--normal{background:#f3f4f6;color:#4b5563}
-.due--overdue{color:var(--red);font-weight:800}.due--soon{color:var(--orange);font-weight:800}.muted{color:var(--muted)}
-.owner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.owner-card{padding:16px;border-radius:16px;background:#fafbff;border:1px solid var(--line);text-align:left}.owner-card:hover{border-color:#c7d2fe;background:#eef2ff}.owner-name{font-weight:800;margin-bottom:10px}.owner-stats{display:flex;flex-wrap:wrap;gap:8px}.ostat{display:inline-flex;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:700}.ostat--active{background:#dbeafe;color:#1d4ed8}.ostat--blocked{background:#fee2e2;color:#991b1b}.ostat--overdue{background:#ffedd5;color:#9a3412}.ostat--risk{background:#fef3c7;color:#92400e}.owner-link{background:none;padding:0;color:#1d4ed8;font-weight:700}
-.phase-stack{display:grid;gap:12px}.phase-card{border:1px solid var(--line);border-radius:16px;padding:0 14px;background:#fcfcfe}.phase-card summary{list-style:none;padding:16px 0;cursor:pointer}.phase-card summary::-webkit-details-marker{display:none}.phase-top{display:flex;justify-content:space-between;gap:16px;align-items:center}.phase-name{font-size:18px;font-weight:800;margin-bottom:6px}.phase-meta{display:flex;flex-wrap:wrap;gap:8px;color:var(--muted);font-size:13px}.phase-stats{min-width:260px}.phase-percent{text-align:right;font-size:22px;font-weight:800}.prog-track{margin-top:8px;height:10px;background:#edf2f7;border-radius:999px;overflow:hidden}.prog-fill{height:100%}.prog-fill--done{background:linear-gradient(90deg,#34d399,#10b981)}.prog-fill--active{background:linear-gradient(90deg,#60a5fa,#2563eb)}.prog-fill--blocked{background:linear-gradient(90deg,#fca5a5,#dc2626)}.prog-fill--draft,.prog-fill--pending{background:#cbd5e1}.phase-counts{margin-top:8px;text-align:right;color:var(--muted);font-size:12px}.phase-body{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:0 0 16px}.phase-list{margin:0;padding-left:18px}.phase-list li{margin:8px 0}.phase-col h4{margin:0 0 8px}
-.timeline-wrap .tl-track{position:relative;height:72px}.tl-line{position:absolute;top:30px;left:0;right:0;height:3px;background:#e5e7eb;border-radius:999px}.tl-marker{position:absolute;top:0;transform:translateX(-50%);text-align:center}.tl-dot{width:12px;height:12px;border-radius:50%;margin:24px auto 6px;background:#4f46e5}.tl-lbl{max-width:90px;font-size:12px;color:var(--muted)}.tl-today{position:absolute;top:0;transform:translateX(-50%)}.tl-today-line{width:2px;height:48px;background:#111827;margin:0 auto}.tl-today-lbl{font-size:12px;font-weight:800;margin-top:6px}
-.empty-box{padding:14px 16px;border:1px dashed var(--line);border-radius:14px;background:#fafbff;color:var(--muted)}
-@media (max-width:1080px){.hero-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.phase-top{flex-direction:column;align-items:flex-start}.phase-stats{min-width:auto;width:100%}.phase-counts,.phase-percent{text-align:left}.phase-body{grid-template-columns:1fr}}
-@media (max-width:720px){.wrap{padding:18px 14px 44px}.header{flex-direction:column;align-items:flex-start}.hero-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.attention-item{flex-direction:column}.attention-problem{max-width:none;min-width:0}.search-input{min-width:0}.section-hd{flex-direction:column}.section-count{width:48px}.filter-group{width:100%}}
+:root{
+  --bg:#f3f5fb;--panel:#ffffff;--line:#e7ebf4;--text:#13203a;--muted:#6e7b96;
+  --navy:#14213d;--blue:#3878ff;--green:#16a34a;--green-bg:#dcfce7;
+  --amber:#d97706;--amber-bg:#fef3c7;--red:#dc2626;--red-bg:#fee2e2;
+  --orange:#ea580c;--orange-bg:#ffedd5;--shadow:0 10px 30px rgba(20,33,61,.06);
+}
+*{box-sizing:border-box} html,body{margin:0;padding:0}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:1480px;margin:0 auto;padding:28px 20px 56px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+h1{margin:0;font-size:26px;line-height:1.2}
+.sub{margin-top:6px;color:var(--muted);font-size:14px}
+.sync{text-align:right;color:var(--muted);font-size:13px;line-height:1.5}
+.top-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:16px 0 20px}
+.metric{background:var(--panel);border-radius:18px;padding:18px 18px 16px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.metric-num{font-size:24px;font-weight:800;line-height:1;margin-bottom:10px}
+.metric-en{font-size:14px;color:var(--muted)}
+.metric-zh{font-size:14px;font-weight:700;margin-top:2px}
+.metric--blocked .metric-num{color:var(--red)}
+.metric--overdue .metric-num{color:var(--orange)}
+.metric--atrisk .metric-num{color:var(--amber)}
+.metric--active .metric-num{color:var(--blue)}
+.metric--done .metric-num{color:var(--green)}
+.metric--total .metric-num{color:var(--navy)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:18px 18px 16px;margin-bottom:18px}
+.section-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
+.section-hd.compact{margin-bottom:12px}
+h2{margin:0;font-size:18px;line-height:1.2}
+.section-hd p{margin:6px 0 0;color:var(--muted);font-size:13px}
+.section-count{min-width:48px;height:48px;padding:0 14px;border-radius:14px;background:#eef2ff;color:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:800}
+.attention-list{display:flex;flex-direction:column;gap:12px}
+.attention-item{display:flex;justify-content:space-between;gap:16px;border:1px solid var(--line);border-radius:16px;padding:14px 16px;text-decoration:none;color:inherit;background:#fafcff}
+.attention-item--blocked{border-color:#fecaca;background:#fff7f7}
+.attention-item--overdue{border-color:#fed7aa;background:#fffaf5}
+.attention-item--atrisk{border-color:#fde68a;background:#fffdf5}
+.att-title{font-size:15px;font-weight:800}
+.att-meta,.att-reason{margin-top:6px;color:var(--muted);font-size:13px}
+.risk-pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800}
+.risk-pill--blocked{background:var(--red-bg);color:var(--red)}
+.risk-pill--overdue{background:var(--orange-bg);color:var(--orange)}
+.risk-pill--atrisk{background:var(--amber-bg);color:var(--amber)}
+.empty-state{border:1px dashed var(--line);border-radius:14px;padding:16px;color:var(--muted);background:#fafcff}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.filters{display:flex;gap:10px;flex-wrap:wrap}
+.filter-btn,.owner-card,.owner-link{cursor:pointer}
+.filter-btn{border:0;background:#f3f4f6;color:#26334d;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700}
+.filter-btn.is-active{background:var(--navy);color:#fff}
+.task-search{width:360px;max-width:100%;padding:11px 14px;border-radius:14px;border:1px solid var(--line);font-size:14px}
+.table-wrap{overflow:auto}
+.task-table{width:100%;border-collapse:collapse}
+.task-table th,.task-table td{padding:16px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle;font-size:14px}
+.task-table th{color:var(--muted);font-weight:700}
+.task-link{color:var(--navy);font-weight:800;text-decoration:none}
+.task-link:hover{text-decoration:underline}
+.task-link--plain{text-decoration:none}
+.task-code{display:inline-block;margin-left:8px;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#6366f1;font-size:11px;font-weight:800;vertical-align:middle}
+.badge,.risk{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+.badge--done,.risk--done{background:var(--green-bg);color:var(--green)}
+.badge--active,.risk--active{background:#dbeafe;color:var(--blue)}
+.badge--blocked,.risk--blocked{background:var(--red-bg);color:var(--red)}
+.badge--pending,.risk--pending{background:#eef2f7;color:#64748b}
+.badge--draft,.risk--draft{background:#f3f4f6;color:#6b7280}
+.risk--overdue{background:var(--orange-bg);color:var(--orange)}
+.risk--atrisk{background:var(--amber-bg);color:var(--amber)}
+.owner-link{border:0;background:none;color:var(--blue);font-weight:800;padding:0}
+.issue{color:#a14f2d}
+.owner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.owner-card{border:1px solid var(--line);background:#fafcff;border-radius:16px;padding:14px 16px;text-align:left}
+.owner-card.is-active{outline:2px solid var(--blue);background:#eef4ff}
+.owner-name{font-size:16px;font-weight:800;margin-bottom:8px}
+.owner-stats{display:flex;flex-wrap:wrap;gap:10px;color:var(--muted);font-size:13px}
+.phase-stack{display:flex;flex-direction:column;gap:12px}
+.phase-card{display:flex;justify-content:space-between;gap:16px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:18px}
+.phase-title{font-size:18px;font-weight:800}
+.phase-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:14px}
+.phase-prog{min-width:340px;max-width:420px;flex:1;text-align:right}
+.phase-pct{font-size:20px;font-weight:900;margin-bottom:8px}
+.prog-track{height:14px;background:#edf2ff;border-radius:999px;overflow:hidden}
+.prog-fill{height:100%;border-radius:999px}
+.prog-fill--done{background:linear-gradient(90deg,#22c55e,#16a34a)}
+.prog-fill--active{background:linear-gradient(90deg,#60a5fa,#3878ff)}
+.prog-fill--blocked{background:linear-gradient(90deg,#fb7185,#dc2626)}
+.prog-fill--pending,.prog-fill--draft{background:linear-gradient(90deg,#cbd5e1,#94a3b8)}
+.phase-mini{font-size:13px;color:var(--muted);margin-top:8px}
+.timeline{position:relative;height:124px;padding:16px 34px 12px;overflow:hidden}
+.timeline-line{position:absolute;left:34px;right:34px;top:64px;height:4px;border-radius:999px;background:#dbe1ee}
+.timeline-today{position:absolute;top:20px;transform:translateX(-50%)}
+.timeline-today-line{height:46px;width:2px;background:#111827;margin:0 auto;border-radius:999px}
+.timeline-today-label{margin-top:6px;font-weight:800;font-size:13px;color:#111827;text-align:center}
+.tl-marker{position:absolute;top:48px;transform:translateX(-50%);width:124px;text-align:center}
+.tl-dot{width:16px;height:16px;border-radius:999px;margin:0 auto 10px;box-shadow:0 0 0 6px rgba(99,102,241,.08)}
+.tl-phase{background:#6366f1}
+.tl-ms{background:#8b5cf6}
+.tl-label{font-size:13px;color:var(--muted);line-height:1.35;word-break:break-word}
+.tl-marker.edge-left{transform:none}
+.tl-marker.edge-left .tl-label{text-align:left}
+.tl-marker.edge-right{transform:translateX(-100%)}
+.tl-marker.edge-right .tl-label{text-align:right}
+.footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 0 0}
+@media (max-width:1100px){
+  .top-metrics{grid-template-columns:repeat(3,1fr)}
+  .phase-card{flex-direction:column;align-items:flex-start}
+  .phase-prog{min-width:0;max-width:none;width:100%;text-align:left}
+}
+@media (max-width:760px){
+  .top-metrics{grid-template-columns:repeat(2,1fr)}
+  .timeline{padding:16px 18px 12px}
+  .timeline-line{left:18px;right:18px}
+  .tl-marker{width:88px}
+}
 </style>
+</head>
+<body>
 <div class="wrap">
-  <header class="header">
-    <div class="title">
+  <div class="header">
+    <div>
       <h1>ARCBOS SnowBot — Project Board</h1>
-      <p>Operational Board · 先看问题，再看任务，再看阶段。团队打开页面就知道“谁该做什么”。</p>
+      <div class="sub">Operational Board · 先看问题，再看任务，再看阶段。团队打开页面就知道“谁该做什么”。</div>
     </div>
-    <div class="sync">Last sync · 04/05周日 15:55<br>https://board.arcbos.com</div>
-  </header>
+    <div class="sync">Last sync · 04/05 16:09<br>https://board.arcbos.com</div>
+  </div>
+
   
-<section class="hero-grid">
-  <div class="hero-card hero-card--blocked"><div class="hero-num">0</div><div class="hero-lbl">Blocked<br><span>阻塞任务</span></div></div>
-  <div class="hero-card hero-card--overdue"><div class="hero-num">0</div><div class="hero-lbl">Overdue<br><span>逾期任务</span></div></div>
-  <div class="hero-card hero-card--risk"><div class="hero-num">0</div><div class="hero-lbl">At Risk<br><span>风险任务</span></div></div>
-  <div class="hero-card hero-card--active"><div class="hero-num">0</div><div class="hero-lbl">Active<br><span>进行中</span></div></div>
-  <div class="hero-card hero-card--done"><div class="hero-num">3</div><div class="hero-lbl">Done<br><span>已完成</span></div></div>
-  <div class="hero-card hero-card--total"><div class="hero-num">3</div><div class="hero-lbl">Total<br><span>总任务</span></div></div>
-</section>
-  
-<section class="section section--attention">
-  <div class="section-hd"><div><h2>🚨 Needs Attention</h2><p>先看问题，再看进度。团队先处理阻塞、逾期、风险项。</p></div><div class="section-count">0</div></div>
-  <div class="attention-list"><div class="empty-box">✅ 当前没有阻塞、逾期或高风险任务</div></div>
-</section>
-  
-<section class="section controls-section">
-  <div class="section-hd compact"><div><h2>📋 Action Board</h2><p>点击筛选，团队快速定位“谁该做什么、哪里有问题”。</p></div></div>
-  <div class="controls-bar">
-    <div class="filter-group">
-      <button class="filter-btn is-active" data-filter="all">全部 All</button>
-      <button class="filter-btn" data-filter="attention">需关注</button>
-      <button class="filter-btn" data-filter="active">进行中</button>
-      <button class="filter-btn" data-filter="blocked">阻塞</button>
-      <button class="filter-btn" data-filter="overdue">逾期</button>
-      <button class="filter-btn" data-filter="atrisk">风险</button>
-      <button class="filter-btn" data-filter="done">已完成</button>
-    </div>
-    <input id="taskSearch" class="search-input" type="search" placeholder="搜索任务 / TaskCode / Owner / Phase">
+<section class="top-metrics">
+  <div class="metric metric--blocked">
+    <div class="metric-num">0</div>
+    <div class="metric-en">Blocked</div>
+    <div class="metric-zh">阻塞任务</div>
+  </div>
+  <div class="metric metric--overdue">
+    <div class="metric-num">0</div>
+    <div class="metric-en">Overdue</div>
+    <div class="metric-zh">逾期任务</div>
+  </div>
+  <div class="metric metric--atrisk">
+    <div class="metric-num">0</div>
+    <div class="metric-en">At Risk</div>
+    <div class="metric-zh">风险任务</div>
+  </div>
+  <div class="metric metric--active">
+    <div class="metric-num">0</div>
+    <div class="metric-en">Active</div>
+    <div class="metric-zh">进行中</div>
+  </div>
+  <div class="metric metric--done">
+    <div class="metric-num">3</div>
+    <div class="metric-en">Done</div>
+    <div class="metric-zh">已完成</div>
+  </div>
+  <div class="metric metric--total">
+    <div class="metric-num">3</div>
+    <div class="metric-en">Total</div>
+    <div class="metric-zh">总任务</div>
   </div>
 </section>
-  
-<section class="section">
-  <div class="section-hd"><div><h2>🧩 Task List</h2><p>任务是主视图。默认把问题任务排在最前面。</p></div><div class="section-count" id="taskCount">3</div></div>
-  <div class="table-wrap">
-    <table class="task-table">
-      <thead><tr><th>任务</th><th>状态</th><th>负责人</th><th>阶段</th><th>截止</th><th>风险</th><th>问题说明</th></tr></thead>
-      <tbody id="taskTableBody">
-<tr class="task-row" data-status="done" data-risk="done" data-owner="li wei" data-search="motor torque validation mech-001 li wei phase 1 — prototype">
-  <td class="col-task"><a href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation</a><span class="task-code">MECH-001</span></td>
-  <td><span class="badge badge--done">Done（已完成）</span></td>
-  <td><button class="owner-link" data-owner-filter="li wei">Li Wei</button></td>
-  <td>Phase 1 — Prototype</td>
-  <td><span class="due">2026/04/12</span></td>
-  <td><span class="risk risk--done">🟢 Done（已完成）</span></td>
-  <td class="problem-cell">—</td>
-</tr>
-<tr class="task-row" data-status="done" data-risk="done" data-owner="zhang san" data-search="sensor calibration elec-003 zhang san phase 1 — prototype">
-  <td class="col-task"><a href="https://notion.so/33995c292b0e809a96c1e7ea6b42d115" target="_blank" rel="noopener">Sensor calibration</a><span class="task-code">ELEC-003</span></td>
-  <td><span class="badge badge--done">Done（已完成）</span></td>
-  <td><button class="owner-link" data-owner-filter="zhang san">Zhang San</button></td>
-  <td>Phase 1 — Prototype</td>
-  <td><span class="due">2026/04/15</span></td>
-  <td><span class="risk risk--done">🟢 Done（已完成）</span></td>
-  <td class="problem-cell">—</td>
-</tr>
-<tr class="task-row" data-status="done" data-risk="done" data-owner="andy" data-search="test blocker cleanup test-001 andy phase 1 — prototype">
-  <td class="col-task"><a href="https://notion.so/33995c292b0e8018a57ecdc9251b6b63" target="_blank" rel="noopener">Test blocker cleanup</a><span class="task-code">TEST-001</span></td>
-  <td><span class="badge badge--done">Done（已完成）</span></td>
-  <td><button class="owner-link" data-owner-filter="andy">Andy</button></td>
-  <td>Phase 1 — Prototype</td>
-  <td><span class="due">2026/04/20</span></td>
-  <td><span class="risk risk--done">🟢 Done（已完成）</span></td>
-  <td class="problem-cell">—</td>
-</tr></tbody>
-    </table>
-  </div>
-</section>
-  
-<section class="section">
-  <div class="section-hd"><div><h2>👤 By Owner</h2><p>按负责人看工作负荷与异常，点击卡片直接筛选任务。</p></div></div>
-  <div class="owner-grid"><div class="empty-box">当前没有进行中任务</div></div>
-</section>
-  
-<section class="section">
-  <div class="section-hd"><div><h2>🗂 Phase View</h2><p>阶段视图降级为参考视图，用来复盘，不作为第一工作入口。</p></div></div>
-  <div class="phase-stack">
-<details class="phase-card" >
-  <summary>
-    <div class="phase-top">
+  <section class="panel">
+    <div class="section-hd">
       <div>
-        <div class="phase-name">Phase 1 — Prototype</div>
+        <h2>🚨 Needs Attention</h2>
+        <p>先看问题，再看进度。团队优先处理阻塞、逾期、风险项。</p>
+      </div>
+      <div class="section-count">0</div>
+    </div>
+    <div class="attention-list"><div class="empty-state">✅ 当前没有阻塞、逾期或高风险任务</div></div>
+  </section>
+  <section class="panel">
+    <div class="section-hd compact">
+      <div>
+        <h2>📋 Action Board</h2>
+        <p>点击筛选，团队快速定位“谁该做什么、哪里有问题”。</p>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="filters">
+        <button class="filter-btn is-active" data-filter="all">全部 All</button>
+        <button class="filter-btn" data-filter="attention">需关注</button>
+        <button class="filter-btn" data-filter="active">进行中</button>
+        <button class="filter-btn" data-filter="blocked">阻塞</button>
+        <button class="filter-btn" data-filter="overdue">逾期</button>
+        <button class="filter-btn" data-filter="atrisk">风险</button>
+        <button class="filter-btn" data-filter="done">已完成</button>
+      </div>
+      <div class="search-wrap">
+        <input id="task-search" class="task-search" type="search" placeholder="搜索任务 / TaskCode / Owner / Phase">
+      </div>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="section-hd">
+      <div>
+        <h2>🧩 Task List</h2>
+        <p>任务是主视图。默认把问题任务排在最前面。</p>
+      </div>
+      <div class="section-count">3</div>
+    </div>
+    <div class="table-wrap">
+      <table class="task-table">
+        <thead>
+          <tr>
+            <th>任务</th><th>状态</th><th>负责人</th><th>阶段</th><th>截止</th><th>风险</th><th>问题说明</th>
+          </tr>
+        </thead>
+        <tbody id="task-table-body"><tr data-filter="all done">
+      <td class="col-task"><span class="task-link task-link--plain">Motor torque validation<span class="task-code">MECH-001</span></span></td>
+      <td><span class="badge badge--done">Done（已完成）</span></td>
+      <td><button class="owner-link" data-owner="Li Wei">Li Wei</button></td>
+      <td>Phase 1 — Prototype</td>
+      <td>2026/04/12</td>
+      <td><span class="risk risk--done">Done 已完成</span></td>
+      <td class="issue">—</td>
+    </tr><tr data-filter="all done">
+      <td class="col-task"><span class="task-link task-link--plain">Sensor calibration<span class="task-code">ELEC-003</span></span></td>
+      <td><span class="badge badge--done">Done（已完成）</span></td>
+      <td><button class="owner-link" data-owner="Zhang San">Zhang San</button></td>
+      <td>Phase 1 — Prototype</td>
+      <td>2026/04/15</td>
+      <td><span class="risk risk--done">Done 已完成</span></td>
+      <td class="issue">Hardware not delivered</td>
+    </tr><tr data-filter="all done">
+      <td class="col-task"><span class="task-link task-link--plain">Test blocker cleanup<span class="task-code">TEST-001</span></span></td>
+      <td><span class="badge badge--done">Done（已完成）</span></td>
+      <td><button class="owner-link" data-owner="Andy">Andy</button></td>
+      <td>Phase 1 — Prototype</td>
+      <td>2026/04/20</td>
+      <td><span class="risk risk--done">Done 已完成</span></td>
+      <td class="issue">—</td>
+    </tr></tbody>
+      </table>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="section-hd compact">
+      <div>
+        <h2>👤 By Owner</h2>
+        <p>按负责人看工作负荷与异常，点击卡片直接筛选任务。</p>
+      </div>
+    </div>
+    <div class="owner-grid"><div class="empty-state">当前没有进行中任务</div></div>
+  </section>
+  <section class="panel">
+    <div class="section-hd compact">
+      <div>
+        <h2>📁 Phase View</h2>
+        <p>阶段视图降级为参考视图，用来复盘，不作为第一工作入口。</p>
+      </div>
+    </div>
+    <div class="phase-stack"><div class="phase-card">
+      <div class="phase-main">
+        <div class="phase-title">Phase 1 — Prototype</div>
         <div class="phase-meta"><span class="badge badge--active">Active（进行中）</span> <span>2026/04/05 — 2026/05/31</span></div>
       </div>
-      <div class="phase-stats">
-        <div class="phase-percent">99%</div>
+      <div class="phase-prog">
+        <div class="phase-pct">99%</div>
         <div class="prog-track"><div class="prog-fill prog-fill--active" style="width:99%"></div></div>
-        <div class="phase-counts">3/3 完成 · 0 阻塞 · 0 进行中</div>
+        <div class="phase-mini">3/3 完成 · 0 阻塞 · 0 进行中</div>
+      </div>
+    </div></div>
+  </section>
+  <section class="panel">
+    <div class="section-hd compact">
+      <div>
+        <h2>🕒 Timeline</h2>
+        <p>时间轴仅作辅助查看，不作为主工作入口。</p>
       </div>
     </div>
-  </summary>
-  <div class="phase-body">
-    <div class="phase-col"><h4>Milestones</h4><ul class="phase-list"><li><span class="badge badge--active">Active（进行中）</span> Chassis design v2 <span class="muted">2026/04/20</span></li></ul></div>
-    <div class="phase-col"><h4>Tasks</h4><ul class="phase-list"><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation</a></li><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e809a96c1e7ea6b42d115" target="_blank" rel="noopener">Sensor calibration</a></li><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e8018a57ecdc9251b6b63" target="_blank" rel="noopener">Test blocker cleanup</a></li></ul></div>
-  </div>
-</details></div>
-</section>
-  
-<section class="section timeline-wrap">
-  <div class="section-hd compact"><div><h2>🕒 Timeline</h2><p>时间轴仅作辅助查看，不作为主工作入口。</p></div></div>
-  <div class="tl-track"><div class="tl-line"></div><div class="tl-marker tl-ms" style="left:3%"><div class="tl-dot"></div><div class="tl-lbl">Chassis desi…</div></div><div class="tl-marker tl-phase" style="left:97%"><div class="tl-dot"></div><div class="tl-lbl">Phase 1 — Pr…</div></div><div class="tl-today" style="left:3%"><div class="tl-today-line"></div><div class="tl-today-lbl">Today</div></div></div>
-</section>
-</div>
+    <div class="timeline">
+      <div class="timeline-line"></div>
+      <div class="timeline-today" style="left:6%">
+        <div class="timeline-today-line"></div>
+        <div class="timeline-today-label">Today</div>
+      </div>
+      <div class="tl-marker edge-left" style="left:6%">
+      <div class="tl-dot tl-ms"></div>
+      <div class="tl-label">Chassis design v2</div>
+    </div><div class="tl-marker edge-right" style="left:94%">
+      <div class="tl-dot tl-phase"></div>
+      <div class="tl-label">Phase 1 — Protot…</div>
+    </div>
+    </div>
+  </section>
 
+  <div class="footer">https://board.arcbos.com · © 2026 ARCBOS · Auto-published from Notion</div>
+</div>
 <script>
 (() => {
-  const buttons = Array.from(document.querySelectorAll('.filter-btn'));
-  const ownerButtons = Array.from(document.querySelectorAll('[data-owner-filter]'));
-  const rows = Array.from(document.querySelectorAll('.task-row'));
-  const search = document.getElementById('taskSearch');
-  const count = document.getElementById('taskCount');
+  const body = document.getElementById('task-table-body');
+  const search = document.getElementById('task-search');
+  const filterButtons = [...document.querySelectorAll('.filter-btn')];
   let activeFilter = 'all';
   let ownerFilter = '';
 
-  function matchesFilter(row) {
-    if (ownerFilter && row.dataset.owner !== ownerFilter) return false;
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'attention') return ['blocked','overdue','atrisk'].includes(row.dataset.risk);
-    if (activeFilter === 'active') return row.dataset.status === 'active';
-    if (activeFilter === 'done') return row.dataset.status === 'done';
-    return row.dataset.risk === activeFilter;
-  }
-
-  function apply() {
-    const q = (search.value || '').trim().toLowerCase();
-    let visible = 0;
-    rows.forEach(row => {
-      const okFilter = matchesFilter(row);
-      const okSearch = !q || row.dataset.search.includes(q);
-      const show = okFilter && okSearch;
-      row.style.display = show ? '' : 'none';
-      if (show) visible += 1;
+  function applyFilters() {
+    const query = (search?.value || '').trim().toLowerCase();
+    [...body.querySelectorAll('tr')].forEach(tr => {
+      const bucket = tr.dataset.filter || '';
+      const owner = tr.querySelector('.owner-link')?.dataset.owner || '';
+      const text = tr.innerText.toLowerCase();
+      const okFilter = activeFilter === 'all' || bucket.includes(activeFilter);
+      const okOwner = !ownerFilter || owner === ownerFilter;
+      const okQuery = !query || text.includes(query);
+      tr.style.display = okFilter && okOwner && okQuery ? '' : 'none';
     });
-    count.textContent = visible;
+    document.querySelectorAll('.owner-card').forEach(card => {
+      card.classList.toggle('is-active', ownerFilter && card.dataset.owner === ownerFilter);
+    });
   }
 
-  buttons.forEach(btn => btn.addEventListener('click', () => {
-    buttons.forEach(x => x.classList.remove('is-active'));
+  filterButtons.forEach(btn => btn.addEventListener('click', () => {
+    filterButtons.forEach(b => b.classList.remove('is-active'));
     btn.classList.add('is-active');
-    activeFilter = btn.dataset.filter;
-    if (activeFilter !== 'all') ownerFilter = '';
-    apply();
+    activeFilter = btn.dataset.filter || 'all';
+    applyFilters();
   }));
 
-  ownerButtons.forEach(btn => btn.addEventListener('click', () => {
-    ownerFilter = btn.dataset.ownerFilter || '';
-    buttons.forEach(x => x.classList.remove('is-active'));
-    activeFilter = 'all';
-    const allBtn = buttons.find(x => x.dataset.filter === 'all');
-    if (allBtn) allBtn.classList.add('is-active');
-    apply();
-    document.querySelector('.task-table')?.scrollIntoView({behavior:'smooth', block:'start'});
-  }));
+  document.querySelectorAll('.owner-card').forEach(card => {
+    card.addEventListener('click', () => {
+      ownerFilter = ownerFilter === card.dataset.owner ? '' : card.dataset.owner;
+      applyFilters();
+    });
+  });
 
-  search?.addEventListener('input', apply);
-  apply();
+  document.querySelectorAll('.owner-link').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ownerFilter = btn.dataset.owner || '';
+      applyFilters();
+      document.getElementById('task-table-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  search?.addEventListener('input', applyFilters);
+  applyFilters();
 })();
 </script>
+</body>
 </html>
