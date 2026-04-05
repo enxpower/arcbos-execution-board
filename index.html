@@ -191,7 +191,7 @@ a:hover{text-decoration:underline}
       <p>Operational Board · 先看问题，再看任务，再看阶段。打开即知道"谁该做什么"。</p>
     </div>
     <div class="sync">
-      Last sync: 04/05周日 18:19<br>
+      Last sync: 04/05周日 18:39<br>
       <span style="opacity:.7">https://board.arcbos.com</span>
     </div>
   </header>
@@ -199,7 +199,7 @@ a:hover{text-decoration:underline}
   
 <div class="hero-grid">
   <div class="hero-card hero-card--blocked">
-    <div class="hero-num">1</div>
+    <div class="hero-num">0</div>
     <div class="hero-lbl">Blocked<br><span>阻塞任务</span></div>
   </div>
   <div class="hero-card hero-card--overdue">
@@ -215,7 +215,7 @@ a:hover{text-decoration:underline}
     <div class="hero-lbl">Active<br><span>进行中</span></div>
   </div>
   <div class="hero-card hero-card--done">
-    <div class="hero-num">1</div>
+    <div class="hero-num">2</div>
     <div class="hero-lbl">Done<br><span>已完成</span></div>
   </div>
   <div class="hero-card hero-card--total">
@@ -230,21 +230,9 @@ a:hover{text-decoration:underline}
       <h2>🚨 Needs Attention</h2>
       <p>先看问题，再看进度。团队先处理阻塞、逾期、风险项。</p>
     </div>
-    <div class="section-count">2</div>
+    <div class="section-count">1</div>
   </div>
   <div class="attention-list">
-<a class="attention-item attention-item--blocked" href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">
-  <div class="attention-main">
-    <div class="attention-title">Motor torque validation <span class="task-code">MECH-001</span></div>
-    <div class="attention-meta">
-      <span class="badge badge--blocked">Blocked（阻塞）</span> <span class="risk risk--blocked">🔴 Blocked（阻塞）</span>
-      <span class="meta-tag">👤 Li Wei</span>
-      <span class="meta-tag">📁 Phase 1 — Prototype</span>
-      <span class="meta-tag">📅 2026/04/12</span>
-    </div>
-  </div>
-  <div class="attention-problem">Spec not confirmed</div>
-</a>
 <a class="attention-item attention-item--overdue" href="https://notion.so/33995c292b0e809a96c1e7ea6b42d115" target="_blank" rel="noopener">
   <div class="attention-main">
     <div class="attention-title">Sensor calibration <span class="task-code">ELEC-003</span></div>
@@ -292,19 +280,6 @@ a:hover{text-decoration:underline}
       </thead>
       <tbody id="taskTableBody">
 <tr class="task-row"
-  data-status="blocked"
-  data-risk="blocked"
-  data-owner="li wei"
-  data-search="motor torque validation mech-001 li wei phase 1 — prototype">
-  <td class="col-task"><a class="task-link" href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation<span class="task-code">MECH-001</span></a></td>
-  <td><span class="badge badge--blocked">Blocked（阻塞）</span></td>
-  <td><button class="owner-btn" data-owner-filter="li wei">Li Wei</button></td>
-  <td class="col-phase">Phase 1 — Prototype</td>
-  <td class="">2026/04/12</td>
-  <td><span class="risk risk--blocked">🔴 Blocked（阻塞）</span></td>
-  <td class="problem-cell">Spec not confirmed</td>
-</tr>
-<tr class="task-row"
   data-status="active"
   data-risk="overdue"
   data-owner="zhang san"
@@ -333,6 +308,19 @@ a:hover{text-decoration:underline}
 <tr class="task-row"
   data-status="done"
   data-risk="done"
+  data-owner="li wei"
+  data-search="motor torque validation mech-001 li wei phase 1 — prototype">
+  <td class="col-task"><a class="task-link" href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation<span class="task-code">MECH-001</span></a></td>
+  <td><span class="badge badge--done">Done（已完成）</span></td>
+  <td><button class="owner-btn" data-owner-filter="li wei">Li Wei</button></td>
+  <td class="col-phase">Phase 1 — Prototype</td>
+  <td class="">2026/04/12</td>
+  <td><span class="risk risk--done">🟢 Done（已完成）</span></td>
+  <td class="muted">—</td>
+</tr>
+<tr class="task-row"
+  data-status="done"
+  data-risk="done"
   data-owner="andy"
   data-search="test blocker cleanup test-001 andy phase 1 — prototype">
   <td class="col-task"><a class="task-link" href="https://notion.so/33995c292b0e8018a57ecdc9251b6b63" target="_blank" rel="noopener">Test blocker cleanup<span class="task-code">TEST-001</span></a></td>
@@ -352,15 +340,6 @@ a:hover{text-decoration:underline}
     <div><h2>👤 By Owner</h2><p>按负责人看工作负荷与异常，点击卡片过滤任务列表。</p></div>
   </div>
   <div class="owner-grid">
-<button class="owner-card" data-owner-filter="li wei">
-  <div class="owner-name">👤 Li Wei</div>
-  <div class="owner-stats">
-    
-    <span class="ostat ostat--blocked">1 阻塞</span>
-    
-    
-  </div>
-</button>
 <button class="owner-card" data-owner-filter="zhang san">
   <div class="owner-name">👤 Zhang San</div>
   <div class="owner-stats">
@@ -397,17 +376,17 @@ a:hover{text-decoration:underline}
         </div>
       </div>
       <div class="phase-stats">
-        <div class="phase-percent">25%</div>
+        <div class="phase-percent">50%</div>
         <div class="prog-track">
-          <div class="prog-fill prog-fill--active" style="width:25%"></div>
+          <div class="prog-fill prog-fill--active" style="width:50%"></div>
         </div>
-        <div class="phase-counts">1/4 完成 · 1 阻塞 · 1 进行中</div>
+        <div class="phase-counts">2/4 完成 · 0 阻塞 · 1 进行中</div>
       </div>
     </div>
   </summary>
   <div class="phase-body">
     <div class="phase-col"><h4>Milestones</h4><ul class="phase-list"><li><span class="badge badge--active">Active（进行中）</span> Chassis design v2 <span class="muted">2026/04/10</span></li></ul></div>
-    <div class="phase-col"><h4>Tasks</h4><ul class="phase-list"><li><span class="badge badge--blocked">Blocked（阻塞）</span> <a href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation</a></li><li><span class="badge badge--pending">At Risk（At Risk）</span> <a href="https://notion.so/33995c292b0e805fb07be0cd4b3befd5" target="_blank" rel="noopener">EMI testing</a></li><li><span class="badge badge--active">Active（进行中）</span> <a href="https://notion.so/33995c292b0e809a96c1e7ea6b42d115" target="_blank" rel="noopener">Sensor calibration</a></li><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e8018a57ecdc9251b6b63" target="_blank" rel="noopener">Test blocker cleanup</a></li></ul></div>
+    <div class="phase-col"><h4>Tasks</h4><ul class="phase-list"><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation</a></li><li><span class="badge badge--pending">At Risk（At Risk）</span> <a href="https://notion.so/33995c292b0e805fb07be0cd4b3befd5" target="_blank" rel="noopener">EMI testing</a></li><li><span class="badge badge--active">Active（进行中）</span> <a href="https://notion.so/33995c292b0e809a96c1e7ea6b42d115" target="_blank" rel="noopener">Sensor calibration</a></li><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e8018a57ecdc9251b6b63" target="_blank" rel="noopener">Test blocker cleanup</a></li></ul></div>
   </div>
 </details></div>
 </section>
