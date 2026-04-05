@@ -1,0 +1,40 @@
+name: Board — Cleanup Legacy Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run only (no writes to Notion)'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: board-cleanup-legacy-data
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run legacy cleanup
+        run: node scripts/cleanup-legacy-data.mjs
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          BOARD_DB_ID: ${{ vars.BOARD_DB_ID }}
+          NOTION_GAP_MS: ${{ vars.NOTION_GAP_MS }}
+          NOTION_MAX_RETRIES: ${{ vars.NOTION_MAX_RETRIES }}
+          LOG_LEVEL: info
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
