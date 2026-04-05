@@ -62,16 +62,19 @@ h2{margin:0;font-size:18px;line-height:1.2}
 .task-link:hover{text-decoration:underline}
 .task-link--plain{text-decoration:none}
 .task-code{display:inline-block;margin-left:8px;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#6366f1;font-size:11px;font-weight:800;vertical-align:middle}
-.badge,.risk{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
-.badge--done,.risk--done{background:var(--green-bg);color:var(--green)}
-.badge--active,.risk--active{background:#dbeafe;color:var(--blue)}
-.badge--blocked,.risk--blocked{background:var(--red-bg);color:var(--red)}
-.badge--pending,.risk--pending{background:#eef2f7;color:#64748b}
+.badge,.risk,.priority,.phase-health{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+.badge--done,.risk--done,.phase-health--done{background:var(--green-bg);color:var(--green)}
+.badge--active,.risk--active,.phase-health--active{background:#dbeafe;color:var(--blue)}
+.badge--blocked,.risk--blocked,.phase-health--blocked{background:var(--red-bg);color:var(--red)}
+.badge--pending,.risk--pending,.priority--none,.phase-health--pending{background:#eef2f7;color:#64748b}
 .badge--draft,.risk--draft{background:#f3f4f6;color:#6b7280}
-.risk--overdue{background:var(--orange-bg);color:var(--orange)}
-.risk--atrisk{background:var(--amber-bg);color:var(--amber)}
+.risk--overdue,.phase-health--ready{background:var(--orange-bg);color:var(--orange)}
+.risk--atrisk,.priority--medium{background:var(--amber-bg);color:var(--amber)}
+.priority--high{background:#fee2e2;color:#b91c1c}
+.priority--low{background:#e0f2fe;color:#0369a1}
 .owner-link{border:0;background:none;color:var(--blue);font-weight:800;padding:0}
 .issue{color:#a14f2d}
+.row-highlight{background:#fafcff}
 .owner-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .owner-card{border:1px solid var(--line);background:#fafcff;border-radius:16px;padding:14px 16px;text-align:left}
 .owner-card.is-active{outline:2px solid var(--blue);background:#eef4ff}
@@ -90,20 +93,27 @@ h2{margin:0;font-size:18px;line-height:1.2}
 .prog-fill--blocked{background:linear-gradient(90deg,#fb7185,#dc2626)}
 .prog-fill--pending,.prog-fill--draft{background:linear-gradient(90deg,#cbd5e1,#94a3b8)}
 .phase-mini{font-size:13px;color:var(--muted);margin-top:8px}
-.timeline{position:relative;height:124px;padding:16px 34px 12px;overflow:hidden}
-.timeline-line{position:absolute;left:34px;right:34px;top:64px;height:4px;border-radius:999px;background:#dbe1ee}
-.timeline-today{position:absolute;top:20px;transform:translateX(-50%)}
-.timeline-today-line{height:46px;width:2px;background:#111827;margin:0 auto;border-radius:999px}
-.timeline-today-label{margin-top:6px;font-weight:800;font-size:13px;color:#111827;text-align:center}
-.tl-marker{position:absolute;top:48px;transform:translateX(-50%);width:124px;text-align:center}
-.tl-dot{width:16px;height:16px;border-radius:999px;margin:0 auto 10px;box-shadow:0 0 0 6px rgba(99,102,241,.08)}
+.timeline{position:relative;height:180px;padding:12px 72px 16px;overflow:hidden}
+.timeline-track{position:absolute;left:72px;right:72px;height:4px;border-radius:999px;background:#dbe1ee}
+.timeline-track--phase{top:68px}
+.timeline-track--ms{top:122px}
+.timeline-rail-label{position:absolute;left:18px;font-size:12px;color:var(--muted);font-weight:700}
+.rail-label--phase{top:58px}
+.rail-label--ms{top:112px}
+.timeline-today{position:absolute;top:8px;transform:translateX(-50%)}
+.timeline-today-label{font-weight:800;font-size:13px;color:#111827;text-align:center;background:#fff;padding:2px 8px;border-radius:999px;box-shadow:var(--shadow)}
+.timeline-today-line{height:136px;width:2px;background:#111827;margin:4px auto 0;border-radius:999px;opacity:.75}
+.tl-marker{position:absolute;transform:translateX(-50%);width:160px}
+.tl-marker--phase{top:52px}
+.tl-marker--ms{top:106px}
+.tl-dot{width:16px;height:16px;border-radius:999px;margin:0 auto 8px;box-shadow:0 0 0 6px rgba(99,102,241,.08)}
 .tl-phase{background:#6366f1}
 .tl-ms{background:#8b5cf6}
-.tl-label{font-size:13px;color:var(--muted);line-height:1.35;word-break:break-word}
+.tl-label{font-size:13px;color:var(--muted);line-height:1.35;word-break:break-word;text-align:center}
 .tl-marker.edge-left{transform:none}
-.tl-marker.edge-left .tl-label{text-align:left}
+.tl-marker.edge-left .tl-label,.tl-marker.edge-left .tl-dot{margin-left:0;text-align:left}
 .tl-marker.edge-right{transform:translateX(-100%)}
-.tl-marker.edge-right .tl-label{text-align:right}
+.tl-marker.edge-right .tl-label,.tl-marker.edge-right .tl-dot{margin-right:0;text-align:right}
 .footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 0 0}
 @media (max-width:1100px){
   .top-metrics{grid-template-columns:repeat(3,1fr)}
@@ -112,9 +122,11 @@ h2{margin:0;font-size:18px;line-height:1.2}
 }
 @media (max-width:760px){
   .top-metrics{grid-template-columns:repeat(2,1fr)}
-  .timeline{padding:16px 18px 12px}
-  .timeline-line{left:18px;right:18px}
-  .tl-marker{width:88px}
+  .timeline{padding:12px 18px 16px;height:170px}
+  .timeline-track{left:18px;right:18px}
+  .timeline-rail-label{display:none}
+  .tl-marker{width:92px}
+  .tl-label{font-size:12px}
 }
 </style>
 </head>
@@ -125,7 +137,7 @@ h2{margin:0;font-size:18px;line-height:1.2}
       <h1>ARCBOS SnowBot — Project Board</h1>
       <div class="sub">Operational Board · 先看问题，再看任务，再看阶段。团队打开页面就知道“谁该做什么”。</div>
     </div>
-    <div class="sync">Last sync · 04/05 16:11<br>https://board.arcbos.com</div>
+    <div class="sync">Last sync · 04/05 16:31<br>https://board.arcbos.com</div>
   </div>
 
   
@@ -169,13 +181,13 @@ h2{margin:0;font-size:18px;line-height:1.2}
       </div>
       <div class="section-count">0</div>
     </div>
-    <div class="attention-list"><div class="empty-state">✅ 当前没有阻塞、逾期或高风险任务</div></div>
+    <div class="attention-list"><div class="empty-state">🟢 当前没有阻塞、逾期或高风险任务。请优先检查即将到期任务。</div></div>
   </section>
   <section class="panel">
     <div class="section-hd compact">
       <div>
         <h2>📋 Action Board</h2>
-        <p>点击筛选，团队快速定位“谁该做什么、哪里有问题”。</p>
+        <p>点击筛选，快速定位“谁该做什么、哪里有问题”。</p>
       </div>
     </div>
     <div class="toolbar">
@@ -193,7 +205,7 @@ h2{margin:0;font-size:18px;line-height:1.2}
       </div>
     </div>
   </section>
-  <section class="panel">
+  <section class="panel" id="task-list-panel">
     <div class="section-hd">
       <div>
         <h2>🧩 Task List</h2>
@@ -205,31 +217,34 @@ h2{margin:0;font-size:18px;line-height:1.2}
       <table class="task-table">
         <thead>
           <tr>
-            <th>任务</th><th>状态</th><th>负责人</th><th>阶段</th><th>截止</th><th>风险</th><th>问题说明</th>
+            <th>任务</th><th>状态</th><th>负责人</th><th>阶段</th><th>截止</th><th>优先级</th><th>风险</th><th>问题说明</th>
           </tr>
         </thead>
-        <tbody id="task-table-body"><tr data-filter="all done">
+        <tbody id="task-table-body"><tr data-filter="all done" data-owner="Li Wei">
       <td class="col-task"><span class="task-link task-link--plain">Motor torque validation<span class="task-code">MECH-001</span></span></td>
       <td><span class="badge badge--done">Done（已完成）</span></td>
       <td><button class="owner-link" data-owner="Li Wei">Li Wei</button></td>
       <td>Phase 1 — Prototype</td>
       <td>2026/04/12</td>
+      <td><span class="priority priority--none">—</span></td>
       <td><span class="risk risk--done">Done 已完成</span></td>
       <td class="issue">—</td>
-    </tr><tr data-filter="all done">
+    </tr><tr data-filter="all done" data-owner="Zhang San">
       <td class="col-task"><span class="task-link task-link--plain">Sensor calibration<span class="task-code">ELEC-003</span></span></td>
       <td><span class="badge badge--done">Done（已完成）</span></td>
       <td><button class="owner-link" data-owner="Zhang San">Zhang San</button></td>
       <td>Phase 1 — Prototype</td>
       <td>2026/04/15</td>
+      <td><span class="priority priority--none">—</span></td>
       <td><span class="risk risk--done">Done 已完成</span></td>
-      <td class="issue">Hardware not delivered</td>
-    </tr><tr data-filter="all done">
+      <td class="issue">—</td>
+    </tr><tr data-filter="all done" data-owner="Andy">
       <td class="col-task"><span class="task-link task-link--plain">Test blocker cleanup<span class="task-code">TEST-001</span></span></td>
       <td><span class="badge badge--done">Done（已完成）</span></td>
       <td><button class="owner-link" data-owner="Andy">Andy</button></td>
       <td>Phase 1 — Prototype</td>
       <td>2026/04/20</td>
+      <td><span class="priority priority--none">—</span></td>
       <td><span class="risk risk--done">Done 已完成</span></td>
       <td class="issue">—</td>
     </tr></tbody>
@@ -243,7 +258,34 @@ h2{margin:0;font-size:18px;line-height:1.2}
         <p>按负责人看工作负荷与异常，点击卡片直接筛选任务。</p>
       </div>
     </div>
-    <div class="owner-grid"><div class="empty-state">当前没有进行中任务</div></div>
+    <div class="owner-grid"><button class="owner-card" data-owner="Andy">
+        <div class="owner-name">Andy</div>
+        <div class="owner-stats">
+          <span>0 进行中</span>
+          <span>0 阻塞</span>
+          <span>0 逾期</span>
+          <span>0 风险</span>
+          <span>1 已完成</span>
+        </div>
+      </button><button class="owner-card" data-owner="Li Wei">
+        <div class="owner-name">Li Wei</div>
+        <div class="owner-stats">
+          <span>0 进行中</span>
+          <span>0 阻塞</span>
+          <span>0 逾期</span>
+          <span>0 风险</span>
+          <span>1 已完成</span>
+        </div>
+      </button><button class="owner-card" data-owner="Zhang San">
+        <div class="owner-name">Zhang San</div>
+        <div class="owner-stats">
+          <span>0 进行中</span>
+          <span>0 阻塞</span>
+          <span>0 逾期</span>
+          <span>0 风险</span>
+          <span>1 已完成</span>
+        </div>
+      </button></div>
   </section>
   <section class="panel">
     <div class="section-hd compact">
@@ -255,7 +297,7 @@ h2{margin:0;font-size:18px;line-height:1.2}
     <div class="phase-stack"><div class="phase-card">
       <div class="phase-main">
         <div class="phase-title">Phase 1 — Prototype</div>
-        <div class="phase-meta"><span class="badge badge--active">Active（进行中）</span> <span>2026/04/05 — 2026/05/31</span></div>
+        <div class="phase-meta"><span class="badge badge--active">Active（进行中）</span> <span>2026/04/05 — 2026/05/31</span> <span class="phase-health phase-health--pending">Pending 未开始</span></div>
       </div>
       <div class="phase-prog">
         <div class="phase-pct">99%</div>
@@ -272,22 +314,26 @@ h2{margin:0;font-size:18px;line-height:1.2}
       </div>
     </div>
     <div class="timeline">
-      <div class="timeline-line"></div>
-      <div class="timeline-today" style="left:6%">
-        <div class="timeline-today-line"></div>
+      <div class="timeline-track timeline-track--phase"></div>
+      <div class="timeline-track timeline-track--ms"></div>
+      <div class="timeline-rail-label rail-label--phase">Phase</div>
+      <div class="timeline-rail-label rail-label--ms">Milestone</div>
+      <div class="timeline-today" style="left:4%">
         <div class="timeline-today-label">Today</div>
+        <div class="timeline-today-line"></div>
       </div>
-      <div class="tl-marker edge-left" style="left:6%">
+      <div class="tl-marker tl-marker--phase edge-right" style="left:96%">
+      <div class="tl-dot tl-phase"></div>
+      <div class="tl-label">Phase 1 — Prototype</div>
+    </div>
+      <div class="tl-marker tl-marker--ms edge-left" style="left:4%">
       <div class="tl-dot tl-ms"></div>
       <div class="tl-label">Chassis design v2</div>
-    </div><div class="tl-marker edge-right" style="left:94%">
-      <div class="tl-dot tl-phase"></div>
-      <div class="tl-label">Phase 1 — Protot…</div>
     </div>
     </div>
   </section>
 
-  <div class="footer">https://board.arcbos.com · © 2026 ARCBOS · Auto-published from Notion</div>
+  <div class="footer">https://board.arcbos.com · © 2026 ARCBOS — Powered by GitHub Pages | Contact: info@arcbos.com</div>
 </div>
 <script>
 (() => {
@@ -297,11 +343,22 @@ h2{margin:0;font-size:18px;line-height:1.2}
   let activeFilter = 'all';
   let ownerFilter = '';
 
+  function scrollToTasks() {
+    document.getElementById('task-list-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function highlightVisibleRows() {
+    [...body.querySelectorAll('tr')].forEach(tr => {
+      const visible = tr.style.display !== 'none';
+      tr.classList.toggle('row-highlight', visible && (activeFilter !== 'all' || ownerFilter));
+    });
+  }
+
   function applyFilters() {
     const query = (search?.value || '').trim().toLowerCase();
     [...body.querySelectorAll('tr')].forEach(tr => {
       const bucket = tr.dataset.filter || '';
-      const owner = tr.querySelector('.owner-link')?.dataset.owner || '';
+      const owner = tr.dataset.owner || '';
       const text = tr.innerText.toLowerCase();
       const okFilter = activeFilter === 'all' || bucket.includes(activeFilter);
       const okOwner = !ownerFilter || owner === ownerFilter;
@@ -311,6 +368,7 @@ h2{margin:0;font-size:18px;line-height:1.2}
     document.querySelectorAll('.owner-card').forEach(card => {
       card.classList.toggle('is-active', ownerFilter && card.dataset.owner === ownerFilter);
     });
+    highlightVisibleRows();
   }
 
   filterButtons.forEach(btn => btn.addEventListener('click', () => {
@@ -318,12 +376,14 @@ h2{margin:0;font-size:18px;line-height:1.2}
     btn.classList.add('is-active');
     activeFilter = btn.dataset.filter || 'all';
     applyFilters();
+    scrollToTasks();
   }));
 
   document.querySelectorAll('.owner-card').forEach(card => {
     card.addEventListener('click', () => {
       ownerFilter = ownerFilter === card.dataset.owner ? '' : card.dataset.owner;
       applyFilters();
+      scrollToTasks();
     });
   });
 
@@ -331,7 +391,16 @@ h2{margin:0;font-size:18px;line-height:1.2}
     btn.addEventListener('click', () => {
       ownerFilter = btn.dataset.owner || '';
       applyFilters();
-      document.getElementById('task-table-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      scrollToTasks();
+    });
+  });
+
+  document.querySelectorAll('.attention-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const name = item.querySelector('.att-title')?.innerText || '';
+      search.value = name.replace(/^.[ ]/, '');
+      applyFilters();
+      scrollToTasks();
     });
   });
 
