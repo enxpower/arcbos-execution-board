@@ -137,18 +137,18 @@ h2{margin:0;font-size:18px;line-height:1.2}
       <h1>ARCBOS SnowBot — Project Board</h1>
       <div class="sub">Operational Board · 先看问题，再看任务，再看阶段。团队打开页面就知道“谁该做什么”。</div>
     </div>
-    <div class="sync">Last sync · 04/05 16:33<br>https://board.arcbos.com</div>
+    <div class="sync">Last sync · 04/05 16:47<br>https://board.arcbos.com</div>
   </div>
 
   
 <section class="top-metrics">
   <div class="metric metric--blocked">
-    <div class="metric-num">0</div>
+    <div class="metric-num">1</div>
     <div class="metric-en">Blocked</div>
     <div class="metric-zh">阻塞任务</div>
   </div>
   <div class="metric metric--overdue">
-    <div class="metric-num">0</div>
+    <div class="metric-num">1</div>
     <div class="metric-en">Overdue</div>
     <div class="metric-zh">逾期任务</div>
   </div>
@@ -158,17 +158,17 @@ h2{margin:0;font-size:18px;line-height:1.2}
     <div class="metric-zh">风险任务</div>
   </div>
   <div class="metric metric--active">
-    <div class="metric-num">0</div>
+    <div class="metric-num">1</div>
     <div class="metric-en">Active</div>
     <div class="metric-zh">进行中</div>
   </div>
   <div class="metric metric--done">
-    <div class="metric-num">3</div>
+    <div class="metric-num">1</div>
     <div class="metric-en">Done</div>
     <div class="metric-zh">已完成</div>
   </div>
   <div class="metric metric--total">
-    <div class="metric-num">3</div>
+    <div class="metric-num">4</div>
     <div class="metric-en">Total</div>
     <div class="metric-zh">总任务</div>
   </div>
@@ -179,9 +179,27 @@ h2{margin:0;font-size:18px;line-height:1.2}
         <h2>🚨 Needs Attention</h2>
         <p>先看问题，再看进度。团队优先处理阻塞、逾期、风险项。</p>
       </div>
-      <div class="section-count">0</div>
+      <div class="section-count">2</div>
     </div>
-    <div class="attention-list"><div class="empty-state">🟢 当前没有阻塞、逾期或高风险任务。请优先检查即将到期任务。</div></div>
+    <div class="attention-list"><a class="attention-item attention-item--blocked" href="#" >
+        <div class="att-left">
+          <div class="att-title">🔴 Motor torque validation</div>
+          <div class="att-meta">MECH-001 · Li Wei · Phase 1 — Prototype · 截止 2026/04/12</div>
+        </div>
+        <div class="att-right">
+          <span class="risk-pill risk-pill--blocked">阻塞</span>
+          <span class="att-reason">Spec not confirmed</span>
+        </div>
+      </a><a class="attention-item attention-item--overdue" href="#" >
+        <div class="att-left">
+          <div class="att-title">🟠 Sensor calibration</div>
+          <div class="att-meta">ELEC-003 · Zhang San · Phase 1 — Prototype · 截止 2026/04/01</div>
+        </div>
+        <div class="att-right">
+          <span class="risk-pill risk-pill--overdue">逾期</span>
+          <span class="att-reason">已逾期，请尽快处理</span>
+        </div>
+      </a></div>
   </section>
   <section class="panel">
     <div class="section-hd compact">
@@ -211,7 +229,7 @@ h2{margin:0;font-size:18px;line-height:1.2}
         <h2>🧩 Task List</h2>
         <p>任务是主视图。默认把问题任务排在最前面。</p>
       </div>
-      <div class="section-count">3</div>
+      <div class="section-count">4</div>
     </div>
     <div class="table-wrap">
       <table class="task-table">
@@ -220,23 +238,32 @@ h2{margin:0;font-size:18px;line-height:1.2}
             <th>任务</th><th>状态</th><th>负责人</th><th>阶段</th><th>截止</th><th>优先级</th><th>风险</th><th>问题说明</th>
           </tr>
         </thead>
-        <tbody id="task-table-body"><tr data-filter="all done" data-owner="Li Wei">
+        <tbody id="task-table-body"><tr data-filter="all blocked attention" data-owner="Li Wei">
       <td class="col-task"><span class="task-link task-link--plain">Motor torque validation<span class="task-code">MECH-001</span></span></td>
-      <td><span class="badge badge--done">Done（已完成）</span></td>
+      <td><span class="badge badge--blocked">Blocked（阻塞）</span></td>
       <td><button class="owner-link" data-owner="Li Wei">Li Wei</button></td>
       <td>Phase 1 — Prototype</td>
       <td>2026/04/12</td>
       <td><span class="priority priority--none">—</span></td>
-      <td><span class="risk risk--done">Done 已完成</span></td>
-      <td class="issue">—</td>
-    </tr><tr data-filter="all done" data-owner="Zhang San">
+      <td><span class="risk risk--blocked">Blocked 阻塞</span></td>
+      <td class="issue">Spec not confirmed</td>
+    </tr><tr data-filter="all active overdue attention" data-owner="Zhang San">
       <td class="col-task"><span class="task-link task-link--plain">Sensor calibration<span class="task-code">ELEC-003</span></span></td>
-      <td><span class="badge badge--done">Done（已完成）</span></td>
+      <td><span class="badge badge--active">Active（进行中）</span></td>
       <td><button class="owner-link" data-owner="Zhang San">Zhang San</button></td>
       <td>Phase 1 — Prototype</td>
-      <td>2026/04/15</td>
+      <td>2026/04/01</td>
       <td><span class="priority priority--none">—</span></td>
-      <td><span class="risk risk--done">Done 已完成</span></td>
+      <td><span class="risk risk--overdue">Overdue 逾期</span></td>
+      <td class="issue">已逾期</td>
+    </tr><tr data-filter="all at risk" data-owner="Andy">
+      <td class="col-task"><span class="task-link task-link--plain">EMI testing<span class="task-code">TEST-002</span></span></td>
+      <td><span class="badge badge--at risk">At Risk（At Risk）</span></td>
+      <td><button class="owner-link" data-owner="Andy">Andy</button></td>
+      <td>Phase 1 — Prototype</td>
+      <td>2026/04/25</td>
+      <td><span class="priority priority--none">—</span></td>
+      <td><span class="risk risk--at risk">At Risk At Risk</span></td>
       <td class="issue">—</td>
     </tr><tr data-filter="all done" data-owner="Andy">
       <td class="col-task"><span class="task-link task-link--plain">Test blocker cleanup<span class="task-code">TEST-001</span></span></td>
@@ -258,26 +285,26 @@ h2{margin:0;font-size:18px;line-height:1.2}
         <p>按负责人看工作负荷与异常，点击卡片直接筛选任务。</p>
       </div>
     </div>
-    <div class="owner-grid"><button class="owner-card" data-owner="Andy">
-        <div class="owner-name">Andy</div>
-        <div class="owner-stats">
-          <span>0 进行中</span>
-          <span>0 阻塞</span>
-          <span>0 逾期</span>
-          <span>0 风险</span>
-          <span>1 已完成</span>
-        </div>
-      </button><button class="owner-card" data-owner="Li Wei">
+    <div class="owner-grid"><button class="owner-card" data-owner="Li Wei">
         <div class="owner-name">Li Wei</div>
         <div class="owner-stats">
           <span>0 进行中</span>
-          <span>0 阻塞</span>
+          <span>1 阻塞</span>
           <span>0 逾期</span>
           <span>0 风险</span>
-          <span>1 已完成</span>
+          <span>0 已完成</span>
         </div>
       </button><button class="owner-card" data-owner="Zhang San">
         <div class="owner-name">Zhang San</div>
+        <div class="owner-stats">
+          <span>1 进行中</span>
+          <span>0 阻塞</span>
+          <span>1 逾期</span>
+          <span>0 风险</span>
+          <span>0 已完成</span>
+        </div>
+      </button><button class="owner-card" data-owner="Andy">
+        <div class="owner-name">Andy</div>
         <div class="owner-stats">
           <span>0 进行中</span>
           <span>0 阻塞</span>
@@ -297,12 +324,12 @@ h2{margin:0;font-size:18px;line-height:1.2}
     <div class="phase-stack"><div class="phase-card">
       <div class="phase-main">
         <div class="phase-title">Phase 1 — Prototype</div>
-        <div class="phase-meta"><span class="badge badge--active">Active（进行中）</span> <span>2026/04/05 — 2026/05/31</span> <span class="phase-health phase-health--pending">Pending 未开始</span></div>
+        <div class="phase-meta"><span class="badge badge--active">Active（进行中）</span> <span>2026/04/01 — 2026/05/31</span> <span class="phase-health phase-health--blocked">Blocked 阻塞</span></div>
       </div>
       <div class="phase-prog">
-        <div class="phase-pct">99%</div>
-        <div class="prog-track"><div class="prog-fill prog-fill--active" style="width:99%"></div></div>
-        <div class="phase-mini">3/3 完成 · 0 阻塞 · 0 进行中</div>
+        <div class="phase-pct">25%</div>
+        <div class="prog-track"><div class="prog-fill prog-fill--active" style="width:25%"></div></div>
+        <div class="phase-mini">1/4 完成 · 1 阻塞 · 1 进行中</div>
       </div>
     </div></div>
   </section>
