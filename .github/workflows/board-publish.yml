@@ -1,16 +1,5 @@
 name: Board — Publish
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Builds and deploys the project board to GitHub Pages.
-# Pure read from Notion + render. No writes.
-#
-# Triggers:
-#   - Daily at 09:00 UTC (weekdays)
-#   - Manual dispatch (with optional force flag)
-#   - Push to main when board-related files change
-#   - Called by tg-bot workflow via workflow_call (board refresh)
-# ─────────────────────────────────────────────────────────────────────────────
-
 on:
   workflow_dispatch:
     inputs:
@@ -18,7 +7,7 @@ on:
         description: 'Force rebuild even if no changes'
         type: boolean
         default: false
-  workflow_call:          # allows tg-bot.yml to trigger this
+  workflow_call:
   schedule:
     - cron: '0 9 * * 1-5'
   push:

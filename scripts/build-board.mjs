@@ -1,44 +1,66 @@
-import fs from 'fs'
-import path from 'path'
-import { renderBoard } from '../src/core/board-renderer-v5.mjs'
+// scripts/build-board.mjs
+// ─────────────────────────────────────────────────────────────────────────────
+// Board build script. Pure read from Notion + render. No writes to Notion.
+//
+// Usage:
+//   node scripts/build-board.mjs
+//
+// Required env:
+//   NOTION_TOKEN, BOARD_DB_ID
+//
+// Optional env:
+//   BOARD_OUT_DIR, BOARD_CNAME, BOARD_TITLE, BOARD_DOMAIN,
+//   NOTION_GAP_MS, LOG_LEVEL, DRY_RUN
+// ─────────────────────────────────────────────────────────────────────────────
 
-const DATA_PATH = './data.json'
-const OUTPUT_DIR = './dist'
-const OUTPUT_FILE = './dist/index.html'
+import fs   from 'fs-extra';
+import path from 'node:path';
 
-// fallback 数据
-const fallbackData = {
-  tasks: [],
-  phases: [],
-  milestones: []
-}
+import { requireBoardConfig, cfg } from '../src/lib/config.mjs';
+import { createLogger } from '../src/lib/logger.mjs';
+import { fetchBoardData } from '../src/core/board-builder.mjs';
+import { renderBoard } from '../src/core/board-renderer.mjs';
 
-function loadData() {
-  if (fs.existsSync(DATA_PATH)) {
-    return JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'))
-  } else {
-    console.warn('⚠️ data.json not found, using fallback')
-    return fallbackData
+const log = createLogger('build-board');
+
+requireBoardConfig();
+
+const runId = Date.now().toString(36).toUpperCase();
+log.info(`Build started`, { runId, dryRun: cfg.dryRun });
+
+// Fetch data from Notion
+const { board, allBlocked, summary } = await fetchBoardData();
+
+// Render HTML
+const lastSync = new Date().toISOString();
+const html     = renderBoard({ board, allBlocked, summary, lastSync });
+
+const outDir = cfg.boardOutDir;
+
+if (!cfg.dryRun) {
+  await fs.ensureDir(outDir);
+
+  // Atomic write
+  const tmp = path.join(outDir, `.index.tmp.${runId}`);
+  await fs.writeFile(tmp, html, 'utf8');
+  await fs.move(tmp, path.join(outDir, 'index.html'), { overwrite: true });
+
+  // CNAME for GitHub Pages
+  if (cfg.boardCname) {
+    await fs.writeFile(path.join(outDir, 'CNAME'), `${cfg.boardCname}\n`, 'utf8');
   }
+
+  // robots.txt
+  await fs.writeFile(path.join(outDir, 'robots.txt'), 'User-agent: *\nDisallow: /\n', 'utf8');
+
+  log.info(`Board written`, { outDir, bytes: html.length });
+} else {
+  log.info(`[DRY RUN] Would write ${html.length} bytes to ${outDir}/index.html`);
 }
 
-function ensureDist() {
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true })
-  }
-}
-
-function main() {
-  const data = loadData()
-
-  const html = renderBoard(data)
-
-  // ✅ 关键：先创建目录
-  ensureDist()
-
-  fs.writeFileSync(OUTPUT_FILE, html)
-
-  console.log('✅ Board built successfully')
-}
-
-main()
+log.info(`Build complete`, {
+  runId,
+  phases:  board.length,
+  blocked: allBlocked.length,
+  ...summary,
+});

@@ -14,7 +14,7 @@ on:
     - cron: '*/5 * * * *'
 
 permissions:
-  contents: write
+  contents: read
   actions:  write   # needed to trigger board-publish via workflow_dispatch
 
 concurrency:
