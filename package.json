@@ -1,0 +1,21 @@
+{
+  "name": "arcbos-board",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ARCBOS SnowBot project board — Notion → GitHub Pages + Telegram bot (v2)",
+  "scripts": {
+    "build":   "node scripts/build-board.mjs",
+    "bot":     "node scripts/poll-telegram.mjs",
+    "prepare-check": "node scripts/prepare.mjs",
+    "build:dry": "DRY_RUN=1 node scripts/build-board.mjs",
+    "bot:dry":   "DRY_RUN=1 node scripts/poll-telegram.mjs"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "fs-extra": "^11.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

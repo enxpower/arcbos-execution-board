@@ -1,0 +1,50 @@
+name: Board — Prepare (Schema Check)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Validates Notion database schema and data integrity.
+# Checks for missing fields, invalid statuses, orphaned rows.
+# Does NOT modify any data.
+#
+# Triggers:
+#   - Manual dispatch
+#   - Weekly on Monday 08:00 UTC (before daily publish)
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      fail_on_error:
+        description: 'Fail workflow if errors found'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '0 8 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: board-prepare
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run prepare checks
+        run: node scripts/prepare.mjs
+        env:
+          NOTION_TOKEN:        ${{ secrets.NOTION_TOKEN }}
+          BOARD_DB_ID:         ${{ vars.BOARD_DB_ID }}
+          NOTION_GAP_MS:       ${{ vars.NOTION_GAP_MS || '600' }}
+          PREPARE_FAIL_ON_ERROR: ${{ github.event.inputs.fail_on_error == 'true' && '1' || '0' }}
+          LOG_LEVEL:           info

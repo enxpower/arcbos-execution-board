@@ -1,0 +1,72 @@
+name: Board — Publish
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Builds and deploys the project board to GitHub Pages.
+# Pure read from Notion + render. No writes.
+#
+# Triggers:
+#   - Daily at 09:00 UTC (weekdays)
+#   - Manual dispatch (with optional force flag)
+#   - Push to main when board-related files change
+#   - Called by tg-bot workflow via workflow_call (board refresh)
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force rebuild even if no changes'
+        type: boolean
+        default: false
+  workflow_call:          # allows tg-bot.yml to trigger this
+  schedule:
+    - cron: '0 9 * * 1-5'
+  push:
+    branches: [main]
+    paths:
+      - 'src/core/board-builder.mjs'
+      - 'src/core/board-renderer.mjs'
+      - 'scripts/build-board.mjs'
+      - 'package.json'
+      - '.github/workflows/board-publish.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: board-publish
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Build board HTML
+        run: node scripts/build-board.mjs
+        env:
+          NOTION_TOKEN:  ${{ secrets.NOTION_TOKEN }}
+          BOARD_DB_ID:   ${{ vars.BOARD_DB_ID }}
+          BOARD_CNAME:   board.arcbos.com
+          BOARD_OUT_DIR: out
+          BOARD_TITLE:   'ARCBOS SnowBot — Project Board'
+          BOARD_DOMAIN:  'https://board.arcbos.com'
+          NOTION_GAP_MS: ${{ vars.NOTION_GAP_MS || '600' }}
+          LOG_LEVEL:     info
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token:   ${{ secrets.GITHUB_TOKEN }}
+          publish_dir:    ./out
+          publish_branch: gh-pages
+          force_orphan:   false
+          commit_message: 'chore: publish board from Notion [skip ci]'

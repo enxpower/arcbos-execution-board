@@ -1,0 +1,85 @@
+name: Bot — Telegram Poll
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Polls Telegram every 5 minutes. Parses task commands. Writes to Notion.
+# State (last_update_id) persisted via actions/cache between runs.
+#
+# After writing to Notion, conditionally triggers board-publish if
+# debounce period has passed (controlled by BOARD_REFRESH_DEBOUNCE_SEC).
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+permissions:
+  contents: read
+  actions:  write   # needed to trigger board-publish via workflow_dispatch
+
+concurrency:
+  group: tg-bot
+  cancel-in-progress: false   # never cancel mid-Notion-write
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    outputs:
+      board_dirty: ${{ steps.poll.outputs.board_dirty }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Restore bot state
+        uses: actions/cache@v4
+        with:
+          path: /tmp/tg-bot-state.json
+          key:  tg-bot-state-${{ github.run_id }}
+          restore-keys: |
+            tg-bot-state-
+
+      - name: Poll Telegram & update Notion
+        id: poll
+        run: |
+          node scripts/poll-telegram.mjs
+          # Check if board needs refresh (state file updated with refresh trigger)
+          if [ -f /tmp/tg-bot-state.json ]; then
+            TRIGGERED=$(node -e "
+              const s = JSON.parse(require('fs').readFileSync('/tmp/tg-bot-state.json','utf8'));
+              const t = s.board && s.board.last_refresh_triggered;
+              const now = Date.now();
+              const age = t ? (now - new Date(t).getTime()) / 1000 : 9999;
+              console.log(age < 60 ? 'true' : 'false');
+            " 2>/dev/null || echo 'false')
+            echo "board_dirty=$TRIGGERED" >> $GITHUB_OUTPUT
+          fi
+        env:
+          TG_BOT_TOKEN:               ${{ secrets.TG_BOT_TOKEN }}
+          NOTION_TOKEN:               ${{ secrets.NOTION_TOKEN }}
+          BOARD_DB_ID:                ${{ vars.BOARD_DB_ID }}
+          BOT_STATE_FILE:             /tmp/tg-bot-state.json
+          NOTION_GAP_MS:              ${{ vars.NOTION_GAP_MS || '600' }}
+          NOTION_MAX_RETRIES:         8
+          BOARD_REFRESH_DEBOUNCE_SEC: ${{ vars.BOARD_REFRESH_DEBOUNCE_SEC || '300' }}
+          LOG_LEVEL:                  info
+
+      - name: Save bot state
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: /tmp/tg-bot-state.json
+          key:  tg-bot-state-${{ github.run_id }}
+
+  # Conditionally trigger board refresh after successful Notion writes
+  refresh-board:
+    needs: poll
+    if: needs.poll.outputs.board_dirty == 'true'
+    uses: ./.github/workflows/board-publish.yml
+    secrets: inherit
