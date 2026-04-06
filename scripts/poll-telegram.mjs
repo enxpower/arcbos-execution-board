@@ -1,17 +1,14 @@
 // scripts/poll-telegram.mjs
 // ─────────────────────────────────────────────────────────────────────────────
-// Telegram bot polling script.
+// Telegram bot polling — GitHub Actions cron, every 5 min.
 //
-// Runs via GitHub Actions cron (every 5 min).
-// Pulls unread messages → parses commands → updates Notion → sends replies.
-// State (last_update_id) persisted via GitHub Actions cache.
+// Idempotency: offset advanced BEFORE processing (early-advance pattern).
+// A crash mid-run drops at most the current batch rather than replaying.
+// task-updater dedup prevents double-write if a message is somehow re-seen.
 //
-// Required env:
-//   TG_BOT_TOKEN, NOTION_TOKEN, BOARD_DB_ID
-//
-// Optional env:
-//   BOT_STATE_FILE, NOTION_GAP_MS, LOG_LEVEL, DRY_RUN,
-//   BOARD_REFRESH_DEBOUNCE_SEC
+// Required env: TG_BOT_TOKEN, NOTION_TOKEN, BOARD_DB_ID
+// Optional env: BOT_STATE_FILE, NOTION_GAP_MS, LOG_LEVEL, DRY_RUN,
+//               BOARD_REFRESH_DEBOUNCE_SEC
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { requireBotConfig, cfg } from '../src/lib/config.mjs';
@@ -27,138 +24,272 @@ const log = createLogger('tg-bot');
 requireBotConfig();
 
 const runId = Date.now().toString(36).toUpperCase();
-log.info(`Bot poll started`, { runId, dryRun: cfg.dryRun });
+log.info('Bot poll started', { runId, dryRun: cfg.dryRun });
 
-// ── Load state ─────────────────────────────────────────────────────────────
+// ── Load state ──────────────────────────────────────────────────────────────
 
 const state      = await loadState(cfg.botStateFile);
 const offset     = state.bot.last_update_id ? state.bot.last_update_id + 1 : 0;
 let   maxId      = state.bot.last_update_id;
 let   processed  = 0;
-let   boardDirty = false; // true if any Notion write happened this run
+let   boardDirty = false;
 
-// ── Fetch updates ──────────────────────────────────────────────────────────
+// ── Fetch updates ───────────────────────────────────────────────────────────
 
 const updates = await getUpdates(offset);
-log.info(`Updates fetched`, { count: updates.length, offset });
+log.info('Updates fetched', { count: updates.length, offset, runId });
 
-// ── Handlers ───────────────────────────────────────────────────────────────
+if (!updates.length) {
+  state.bot.last_run = new Date().toISOString();
+  await saveState(cfg.botStateFile, state);
+  log.info('Bot poll complete — no updates', { runId });
+  process.exit(0);
+}
+
+// ── EARLY OFFSET ADVANCE ────────────────────────────────────────────────────
+// Advance maxId before processing so a mid-run crash doesn't cause replay.
+
+for (const upd of updates) maxId = Math.max(maxId, upd.update_id);
+state.bot.last_update_id = maxId;
+state.bot.last_run       = new Date().toISOString();
+await saveState(cfg.botStateFile, state);
+log.info('Offset advanced (early)', { newMaxId: maxId });
+
+// ── Formatters ──────────────────────────────────────────────────────────────
+
+const STATUS_ZH = {
+  Done:'已完成', Active:'进行中', Blocked:'阻塞中',
+  Draft:'待审批', Pending:'未开始',
+};
+
+function fmtStatus(s) { return STATUS_ZH[s] || s || '—'; }
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try {
+    return new Date(d).toLocaleDateString('zh-CN', {
+      year:'numeric', month:'2-digit', day:'2-digit',
+    });
+  } catch { return String(d); }
+}
+
+const SYS_TAG = '\n\n<code>ARCBOS · Execution System</code>';
+
+function buildActionReply({ headline, task, note }) {
+  const lines = [`<b>${headline}</b>`, '─────────────────────'];
+  if (task.taskCode) lines.push(`TaskCode : <code>${task.taskCode}</code>`);
+  lines.push(`任务名称 : ${task.name}`);
+  lines.push(`当前状态 : ${fmtStatus(task.status)}`);
+  if (task.owner)     lines.push(`负责人   : ${task.owner}`);
+  if (task.due)       lines.push(`截止日期 : ${fmtDate(task.due)}`);
+  if (task.phase)     lines.push(`所属阶段 : ${task.phase}`);
+  if (task.blockedBy && task.status === 'Blocked')
+    lines.push(`阻塞原因 : ${task.blockedBy}`);
+  if (note) { lines.push('─────────────────────'); lines.push(note); }
+  lines.push(SYS_TAG);
+  return lines.join('\n');
+}
+
+function buildQueryReply(task) {
+  const icon = { Done:'✅', Active:'🔵', Blocked:'🚨', Draft:'🔒', Pending:'⏸' }[task.status] || '❓';
+  const lines = [`${icon} <b>任务状态查询</b>`, '─────────────────────'];
+  if (task.taskCode)  lines.push(`TaskCode : <code>${task.taskCode}</code>`);
+  lines.push(`任务名称 : ${task.name}`);
+  lines.push(`当前状态 : ${fmtStatus(task.status)}`);
+  if (task.owner)     lines.push(`负责人   : ${task.owner}`);
+  if (task.due)       lines.push(`截止日期 : ${fmtDate(task.due)}`);
+  if (task.phase)     lines.push(`所属阶段 : ${task.phase}`);
+  if (task.module)    lines.push(`模块     : ${task.module}`);
+  if (task.blockedBy && task.status === 'Blocked')
+    lines.push(`阻塞原因 : ${task.blockedBy}`);
+  if (task.output)    lines.push(`交付物   : ${task.output}`);
+  lines.push(SYS_TAG);
+  return lines.join('\n');
+}
+
+function buildErrorReply(msg) {
+  return `⚠️ <b>操作无法执行</b>\n─────────────────────\n${msg}${SYS_TAG}`;
+}
+
+function buildNotFoundReply(query) {
+  return [
+    '❌ <b>未找到匹配任务</b>',
+    '─────────────────────',
+    `查询条件 : ${query}`,
+    '',
+    '建议使用 TaskCode 精确匹配，',
+    '或发送 <b>搜索 关键词</b> 查看候选列表。',
+    SYS_TAG,
+  ].join('\n');
+}
+
+function buildAmbiguousReply(query, candidates) {
+  return [
+    '🔍 <b>找到多个匹配任务</b>',
+    '─────────────────────',
+    `查询条件 : ${query}`,
+    '',
+    '候选列表：',
+    formatCandidates(candidates),
+    '',
+    '请使用 TaskCode 或完整任务名称重新指定。',
+    SYS_TAG,
+  ].join('\n');
+}
+
+// ── Handlers ────────────────────────────────────────────────────────────────
 
 async function handleDone(chatId, query, actor) {
+  log.info('[handler:done] start', { query, actor });
   const { type, task, candidates } = await matchTask(query);
 
-  if (type === MATCH.NONE) {
-    return `未找到任务「${query}」\n\n发送「<b>搜索 ${query}</b>」查看相似任务。`;
-  }
+  if (type === MATCH.NONE)      return buildNotFoundReply(query);
+  if (type === MATCH.AMBIGUOUS) return buildAmbiguousReply(query, candidates);
 
-  if (type === MATCH.AMBIGUOUS) {
-    return `找到多个匹配任务，请用更精确的名称或 TaskCode 指定：\n\n${formatCandidates(candidates)}`;
-  }
+  log.info('[match] found', {
+    taskCode: task.taskCode, name: task.name,
+    currentStatus: task.status, targetStatus: 'Done', matchType: type,
+  });
 
   if (!canTransition(task.status, 'Done')) {
-    return transitionError(task, 'Done');
+    log.warn('[transition] rejected', { task: task.name, from: task.status, to: 'Done' });
+    return buildErrorReply(transitionError(task, 'Done'));
   }
 
   const result = await updateTaskStatus(task, 'Done', undefined, actor);
-  if (!result.ok) return transitionError(task, 'Done');
-  if (result.skipped) return `「${task.name}」已经是完成状态。`;
+  log.info('[notion] write result', { task: task.name, ok: result.ok, skipped: result.skipped });
+
+  if (!result.ok) return buildErrorReply(transitionError(task, 'Done'));
+
+  if (result.skipped) {
+    return buildActionReply({
+      headline: '✅ 任务已完成（状态未变）',
+      task: { ...task, status: 'Done' },
+      note: '任务已处于完成状态，无需重复操作。',
+    });
+  }
 
   boardDirty = true;
-  const ownerNote = task.owner ? `  负责人：${task.owner}` : '';
-  const dueNote   = task.due   ? `  截止：${task.due}`   : '';
-  const matchNote = type === MATCH.CONTAINS ? `\n（按名称模糊匹配）` : '';
-  return `✅ <b>已完成</b>：${task.name}${ownerNote}${dueNote}${matchNote}`;
+  const matchNote = type === MATCH.CONTAINS
+    ? '已通过模糊匹配记录。建议后续使用 TaskCode。'
+    : '状态变更已写入 Notion。';
+  return buildActionReply({
+    headline: '✅ 任务已完成',
+    task: { ...task, status: 'Done' },
+    note: matchNote,
+  });
 }
 
 async function handleBlock(chatId, query, reason, actor) {
+  log.info('[handler:block] start', { query, reason: reason?.slice(0, 40), actor });
+
   if (!reason || reason.trim().length < 3) {
-    return '请填写具体的阻塞原因（至少3个字）。\n\n格式：阻塞 任务名称 原因：具体说明';
+    return buildErrorReply(
+      '阻塞原因不足，请提供至少3个字的说明。\n\n' +
+      '格式：<code>阻塞 TASKCODE 原因：具体说明</code>'
+    );
   }
 
   const { type, task, candidates } = await matchTask(query);
+  if (type === MATCH.NONE)      return buildNotFoundReply(query);
+  if (type === MATCH.AMBIGUOUS) return buildAmbiguousReply(query, candidates);
 
-  if (type === MATCH.NONE) {
-    return `未找到任务「${query}」`;
-  }
-  if (type === MATCH.AMBIGUOUS) {
-    return `找到多个匹配任务：\n\n${formatCandidates(candidates)}`;
-  }
+  log.info('[match] found', {
+    taskCode: task.taskCode, name: task.name,
+    currentStatus: task.status, targetStatus: 'Blocked', matchType: type,
+  });
 
   if (!canTransition(task.status, 'Blocked')) {
-    return transitionError(task, 'Blocked');
+    log.warn('[transition] rejected', { task: task.name, from: task.status, to: 'Blocked' });
+    return buildErrorReply(transitionError(task, 'Blocked'));
   }
 
   const result = await updateTaskStatus(task, 'Blocked', reason.trim(), actor);
-  if (!result.ok) return transitionError(task, 'Blocked');
+  log.info('[notion] write result', { task: task.name, ok: result.ok, skipped: result.skipped });
+
+  if (!result.ok) return buildErrorReply(transitionError(task, 'Blocked'));
 
   boardDirty = true;
-  return `🚨 <b>已记录阻塞</b>：${task.name}\n⚠️ 原因：${reason.trim()}\n看板将在5分钟内更新。`;
+  return buildActionReply({
+    headline: '🚨 任务已标记为阻塞',
+    task: { ...task, status: 'Blocked', blockedBy: reason.trim() },
+    note: '阻塞状态已写入 Notion，看板将在5分钟内更新。',
+  });
 }
 
 async function handleActivate(chatId, query, actor) {
+  log.info('[handler:activate] start', { query, actor });
   const { type, task, candidates } = await matchTask(query);
 
-  if (type === MATCH.NONE) return `未找到任务「${query}」`;
-  if (type === MATCH.AMBIGUOUS) {
-    return `找到多个匹配任务：\n\n${formatCandidates(candidates)}`;
-  }
+  if (type === MATCH.NONE)      return buildNotFoundReply(query);
+  if (type === MATCH.AMBIGUOUS) return buildAmbiguousReply(query, candidates);
+
+  log.info('[match] found', {
+    taskCode: task.taskCode, name: task.name,
+    currentStatus: task.status, targetStatus: 'Active', matchType: type,
+  });
 
   if (!canTransition(task.status, 'Active')) {
-    return transitionError(task, 'Active');
+    log.warn('[transition] rejected', { task: task.name, from: task.status, to: 'Active' });
+    return buildErrorReply(transitionError(task, 'Active'));
   }
 
   const result = await updateTaskStatus(task, 'Active', '', actor);
-  if (!result.ok) return transitionError(task, 'Active');
-  if (result.skipped) return `「${task.name}」已经是进行中状态。`;
+  log.info('[notion] write result', { task: task.name, ok: result.ok, skipped: result.skipped });
+
+  if (!result.ok) return buildErrorReply(transitionError(task, 'Active'));
+
+  if (result.skipped) {
+    return buildActionReply({
+      headline: '🔵 任务已处于进行中（无变更）',
+      task: { ...task, status: 'Active' },
+    });
+  }
 
   boardDirty = true;
-  return `▶️ <b>已激活</b>：${task.name}\n阻塞已解除，继续进行中。`;
+  return buildActionReply({
+    headline: '🔵 任务已恢复为进行中',
+    task: { ...task, status: 'Active', blockedBy: '' },
+    note: '阻塞已解除，状态已更新。',
+  });
 }
 
 async function handleProgress(chatId, query) {
+  log.info('[handler:progress] start', { query });
   const { type, task, candidates } = await matchTask(query);
 
-  if (type === MATCH.NONE) return `未找到任务「${query}」`;
-  if (type === MATCH.AMBIGUOUS) {
-    return `找到 ${candidates.length} 个匹配任务：\n\n${formatCandidates(candidates)}`;
-  }
+  if (type === MATCH.NONE)      return buildNotFoundReply(query);
+  if (type === MATCH.AMBIGUOUS) return buildAmbiguousReply(query, candidates);
 
-  const statusMap = {
-    Draft:'草案待审批', Active:'进行中', Done:'已完成',
-    Blocked:'已阻塞', Pending:'未开始',
-  };
-
-  const statusIcon = { Done:'✅', Active:'🔄', Blocked:'🚨', Draft:'📝', Pending:'⏳' }[task.status] || '📋';
-  const statusText = statusMap[task.status] || task.status;
-  const code = task.taskCode ? ` [${task.taskCode}]` : '';
-  let msg = `${statusIcon} <b>${task.name}</b>${code}\n状态：${statusText}`;
-  if (task.owner) msg += `  负责人：${task.owner}`;
-  if (task.due)   msg += `  截止：${task.due}`;
-  if (task.phase) msg += `\n阶段：${task.phase}`;
-  if (task.module) msg += `  模块：${task.module}`;
-  if (task.blockedBy && task.status === 'Blocked') msg += `\n⚠️ 阻塞原因：${task.blockedBy}`;
-  if (task.output) msg += `\n📄 输出物：${task.output}`;
-  return msg;
+  log.info('[match] found', { taskCode: task.taskCode, name: task.name, status: task.status });
+  return buildQueryReply(task);
 }
 
 async function handleSearch(query) {
+  log.info('[handler:search] start', { query });
   const { type, task, candidates } = await matchTask(query);
 
-  if (type === MATCH.NONE) return `未找到包含「${query}」的任务。`;
-  if (type === MATCH.EXACT_CODE || type === MATCH.EXACT_NAME || type === MATCH.CONTAINS) {
-    if (candidates.length === 1) return handleProgress(null, task.name);
-  }
+  if (type === MATCH.NONE) return buildNotFoundReply(query);
 
-  const list = formatCandidates(candidates);
-  return `搜索「${query}」找到 ${candidates.length} 个任务：\n\n${list}\n\n发送「进度 任务名」查看详情。`;
+  if (candidates.length === 1) return buildQueryReply(candidates[0]);
+
+  return [
+    '🔍 <b>搜索结果</b>',
+    '─────────────────────',
+    `关键词 : ${query}`,
+    `共找到 : ${candidates.length} 个任务`,
+    '',
+    formatCandidates(candidates),
+    '',
+    '发送 <b>进度 TASKCODE</b> 查看任务详情。',
+    SYS_TAG,
+  ].join('\n');
 }
 
-// ── Process each update ────────────────────────────────────────────────────
+// ── Process updates ─────────────────────────────────────────────────────────
 
 for (const upd of updates) {
-  maxId = Math.max(maxId, upd.update_id);
-
-  const msg  = upd.message;
+  const msg = upd.message;
   if (!msg?.text) continue;
 
   const chatId  = msg.chat.id;
@@ -166,61 +297,67 @@ for (const upd of updates) {
   const from    = msg.from?.first_name || msg.from?.username || `user:${msg.from?.id}`;
   const isGroup = msg.chat.type !== 'private';
 
-  // In group chats: only respond if @mentioned or starts with a known keyword
   if (isGroup) {
-    const stripped = text.replace(/^@\S+\s*/, '').trim();
-    const isMentioned  = text.includes('@');
-    const isKnownCmd   = /^(完成|阻塞|进度|激活|解除阻塞|搜索|帮助|\/help|\/start)/.test(stripped);
-    if (!isMentioned && !isKnownCmd) continue;
+    const stripped  = text.replace(/^@\S+\s*/, '').trim();
+    const mentioned = text.includes('@');
+    const knownCmd  = /^(完成|阻塞|进度|激活|解除阻塞|搜索|帮助|\/help|\/start)/.test(stripped);
+    if (!mentioned && !knownCmd) continue;
   }
 
   const parsed = parseCommand(text);
-  log.info(`Processing message`, {
-    updateId: upd.update_id, chatId, from, cmd: parsed.cmd,
-    query: parsed.query || '', isGroup,
+  log.info('[update] processing', {
+    updateId: upd.update_id, chatId, from,
+    cmd: parsed.cmd, query: parsed.query || '', isGroup,
   });
 
   let reply;
   try {
     switch (parsed.cmd) {
-      case CMD.DONE:     reply = await handleDone(chatId, parsed.query, from); break;
+      case CMD.DONE:     reply = await handleDone(chatId, parsed.query, from);                 break;
       case CMD.BLOCK:    reply = await handleBlock(chatId, parsed.query, parsed.reason, from); break;
-      case CMD.ACTIVATE: reply = await handleActivate(chatId, parsed.query, from); break;
-      case CMD.PROGRESS: reply = await handleProgress(chatId, parsed.query); break;
-      case CMD.SEARCH:   reply = await handleSearch(parsed.query); break;
-      case CMD.HELP:     reply = HELP_TEXT; break;
+      case CMD.ACTIVATE: reply = await handleActivate(chatId, parsed.query, from);            break;
+      case CMD.PROGRESS: reply = await handleProgress(chatId, parsed.query);                  break;
+      case CMD.SEARCH:   reply = await handleSearch(parsed.query);                            break;
+      case CMD.HELP:     reply = HELP_TEXT;                                                    break;
       default:
-        reply = `未识别的指令。\n\n发送「帮助」查看支持的命令。\n你发送的：${parsed.raw || text}`;
+        reply = buildErrorReply(
+          `未识别的指令：<code>${parsed.raw || text}</code>\n\n发送 <b>帮助</b> 查看支持的命令列表。`
+        );
     }
   } catch (e) {
-    log.error(`Command handler failed`, { cmd: parsed.cmd, error: e.message });
-    reply = '操作失败，请稍后重试。';
+    log.error('[handler] exception', { cmd: parsed.cmd, error: e.message });
+    reply = buildErrorReply('系统内部错误，请稍后重试。');
   }
 
-  await sendMessage(chatId, reply);
+  try {
+    await sendMessage(chatId, reply);
+    log.info('[telegram] reply sent', { updateId: upd.update_id, chatId });
+  } catch (e) {
+    log.error('[telegram] reply failed', { updateId: upd.update_id, chatId, error: e.message });
+  }
+
   processed++;
 }
 
-// ── Save state ─────────────────────────────────────────────────────────────
+// ── Final state save ────────────────────────────────────────────────────────
+// maxId + last_run already saved in early-advance above.
+// Update processed_count and board refresh debounce here.
 
-state.bot.last_update_id = maxId;
-state.bot.last_run       = new Date().toISOString();
 state.bot.processed_count = (state.bot.processed_count || 0) + processed;
 
-// Record board refresh debounce timestamp if writes happened
 if (boardDirty) {
   const debounceSec = cfg.boardRefreshDebounceSec;
   if (canRefreshBoard(state, debounceSec)) {
     state.board.last_refresh_triggered = new Date().toISOString();
-    log.info(`Board refresh debounce triggered`, { debounceSec });
+    log.info('[board] refresh debounce triggered', { debounceSec });
   } else {
-    log.info(`Board refresh skipped (debounce active)`);
+    log.info('[board] refresh skipped — debounce active');
   }
 }
 
 await saveState(cfg.botStateFile, state);
 
-log.info(`Bot poll complete`, {
+log.info('Bot poll complete', {
   runId, processed, maxId, boardDirty,
   totalProcessed: state.bot.processed_count,
 });
