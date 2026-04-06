@@ -21,6 +21,7 @@ export const CMD = {
   SEARCH:   'search',
   HELP:     'help',
   UNKNOWN:  'unknown',
+  SHORTCUT: 'shortcut',
 };
 
 // Strip @BotName mentions from group messages
@@ -60,6 +61,19 @@ export function parseCommand(rawText) {
   // 搜索 <keyword>
   const search = text.match(/^搜索\s+(.+)$/);
   if (search) return { cmd: CMD.SEARCH, query: search[1].trim() };
+
+  // Numeric shortcut: '完成 1' / '阻塞 1 原因：xxx' / '进度 1'
+  const shortcutDone = text.match(/^完成\s+(\d+)$/);
+  if (shortcutDone) return { cmd: CMD.SHORTCUT, action: 'done', index: parseInt(shortcutDone[1], 10) - 1 };
+
+  const shortcutBlock = text.match(/^阻塞\s+(\d+)\s+原因[：:]\s*(.+)$/);
+  if (shortcutBlock) return { cmd: CMD.SHORTCUT, action: 'block', index: parseInt(shortcutBlock[1], 10) - 1, reason: shortcutBlock[2].trim() };
+
+  const shortcutActivate = text.match(/^(激活|解除阻塞)\s+(\d+)$/);
+  if (shortcutActivate) return { cmd: CMD.SHORTCUT, action: 'activate', index: parseInt(shortcutActivate[2], 10) - 1 };
+
+  const shortcutProgress = text.match(/^进度\s+(\d+)$/);
+  if (shortcutProgress) return { cmd: CMD.SHORTCUT, action: 'progress', index: parseInt(shortcutProgress[1], 10) - 1 };
 
   return { cmd: CMD.UNKNOWN, raw: text };
 }

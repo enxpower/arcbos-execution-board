@@ -1,5 +1,5 @@
 // src/core/board-renderer.mjs
-// v1.0.1 — fixed duplicate renderScript + </script> tag escape
+// v1.1.0 — redesigned hero, task list hides Done by default, cleaner layout
 // Pure function — no Notion calls, no file I/O.
 
 import { cfg } from '../lib/config.mjs';
@@ -125,45 +125,56 @@ function safePhaseProgress(ph) {
   return pct;
 }
 
+// ── Section: Two-tier hero ────────────────────────────────────────────────────
+// Top row: issues (large, colored) — what needs action TODAY
+// Bottom row: background stats (small, muted)
+
 function renderHeroGrid(summary, allTasks) {
   const overdue = allTasks.filter(t => t._risk === 'overdue').length;
   const atrisk  = allTasks.filter(t => t._risk === 'atrisk').length;
+  const hasIssue = summary.totalBlocked > 0 || overdue > 0 || atrisk > 0;
+
   return `
-<div class="hero-grid">
-  <div class="hero-card hero-card--blocked">
-    <div class="hero-num">${summary.totalBlocked}</div>
-    <div class="hero-lbl">Blocked<br><span>阻塞任务</span></div>
+<div class="hero-wrap">
+  <div class="hero-primary">
+    <div class="hero-primary-label">需要今日处理</div>
+    <div class="hero-primary-cards">
+      <div class="hpc hpc--blocked ${summary.totalBlocked === 0 ? 'hpc--zero' : ''}">
+        <div class="hpc-num">${summary.totalBlocked}</div>
+        <div class="hpc-lbl">🔴 阻塞</div>
+      </div>
+      <div class="hpc hpc--overdue ${overdue === 0 ? 'hpc--zero' : ''}">
+        <div class="hpc-num">${overdue}</div>
+        <div class="hpc-lbl">🟠 逾期</div>
+      </div>
+      <div class="hpc hpc--risk ${atrisk === 0 ? 'hpc--zero' : ''}">
+        <div class="hpc-num">${atrisk}</div>
+        <div class="hpc-lbl">🟡 风险</div>
+      </div>
+    </div>
+    ${hasIssue ? '' : '<div class="hero-all-clear">✅ 当前执行正常，无需立即处理</div>'}
   </div>
-  <div class="hero-card hero-card--overdue">
-    <div class="hero-num">${overdue}</div>
-    <div class="hero-lbl">Overdue<br><span>逾期任务</span></div>
-  </div>
-  <div class="hero-card hero-card--risk">
-    <div class="hero-num">${atrisk}</div>
-    <div class="hero-lbl">At Risk<br><span>风险任务</span></div>
-  </div>
-  <div class="hero-card hero-card--active">
-    <div class="hero-num">${summary.totalActive}</div>
-    <div class="hero-lbl">Active<br><span>进行中</span></div>
-  </div>
-  <div class="hero-card hero-card--done">
-    <div class="hero-num">${summary.totalDone}</div>
-    <div class="hero-lbl">Done<br><span>已完成</span></div>
-  </div>
-  <div class="hero-card hero-card--total">
-    <div class="hero-num">${summary.totalTasks}</div>
-    <div class="hero-lbl">Total<br><span>全部任务</span></div>
+  <div class="hero-secondary">
+    <span class="hsc"><span class="hsc-num">${summary.totalActive}</span><span class="hsc-lbl">进行中</span></span>
+    <span class="hsc-sep">·</span>
+    <span class="hsc"><span class="hsc-num">${summary.totalDone}</span><span class="hsc-lbl">已完成</span></span>
+    <span class="hsc-sep">·</span>
+    <span class="hsc"><span class="hsc-num">${summary.totalTasks}</span><span class="hsc-lbl">总计</span></span>
+    ${summary.totalDraft ? `<span class="hsc-sep">·</span><span class="hsc"><span class="hsc-num">${summary.totalDraft}</span><span class="hsc-lbl">待审批</span></span>` : ''}
   </div>
 </div>`;
 }
+
+// ── Section: Attention Zone ───────────────────────────────────────────────────
 
 function renderAttentionZone(allTasks) {
   const items = allTasks
     .filter(t => t._risk === 'blocked' || t._risk === 'overdue' || t._risk === 'atrisk')
     .sort(compareTasks);
 
-  const content = items.length
-    ? items.map(t => `
+  if (!items.length) return '';
+
+  const content = items.map(t => `
 <a class="attention-item attention-item--${t._risk}" href="${esc(notionUrl(t.id))}" target="_blank" rel="noopener">
   <div class="attention-main">
     <div class="attention-title">${esc(t.name)}${t.taskCode ? ` <span class="task-code">${esc(t.taskCode)}</span>` : ''}</div>
@@ -175,47 +186,26 @@ function renderAttentionZone(allTasks) {
     </div>
   </div>
   <div class="attention-problem">${esc(problemText(t))}</div>
-</a>`).join('')
-    : `<div class="empty-box">✅ 当前没有阻塞、逾期或高风险任务</div>`;
+</a>`).join('');
 
   return `
 <section class="section section--attention">
   <div class="section-hd">
-    <div>
-      <h2>🚨 Needs Attention</h2>
-      <p>先看问题，再看进度。团队先处理阻塞、逾期、风险项。</p>
-    </div>
-    <div class="section-count">${items.length}</div>
+    <div><h2>🚨 Needs Attention</h2><p>先处理这里，再看下方任务列表。</p></div>
+    <div class="section-count section-count--red">${items.length}</div>
   </div>
   <div class="attention-list">${content}</div>
 </section>`;
 }
 
-function renderControls() {
-  return `
-<section class="section controls-section">
-  <div class="section-hd compact">
-    <div><h2>📋 Action Board</h2><p>点击筛选，快速定位"谁该做什么、哪里有问题"。</p></div>
-  </div>
-  <div class="controls-bar">
-    <div class="filter-group">
-      <button class="filter-btn is-active" data-filter="all">全部</button>
-      <button class="filter-btn" data-filter="attention">需关注</button>
-      <button class="filter-btn" data-filter="active">进行中</button>
-      <button class="filter-btn" data-filter="blocked">阻塞</button>
-      <button class="filter-btn" data-filter="overdue">逾期</button>
-      <button class="filter-btn" data-filter="atrisk">风险</button>
-      <button class="filter-btn" data-filter="done">已完成</button>
-    </div>
-    <input id="taskSearch" class="search-input" type="search" placeholder="搜索任务 / TaskCode / 负责人 / 阶段">
-  </div>
-</section>`;
-}
+// ── Section: Task List (Done hidden by default) ───────────────────────────────
 
 function renderTaskList(allTasks) {
   const sorted = [...allTasks].sort(compareTasks);
+  const active = sorted.filter(t => t.status !== 'Done' && t.status !== 'Draft');
+  const done   = sorted.filter(t => t.status === 'Done');
 
-  const rows = sorted.map(t => {
+  function row(t) {
     const problem = problemText(t);
     const dueCls  = t._risk === 'overdue' ? 'due--overdue'
                   : t._risk === 'atrisk'  ? 'due--soon' : '';
@@ -231,15 +221,44 @@ function renderTaskList(allTasks) {
   <td class="col-phase">${esc(t._phaseName)}</td>
   <td class="${dueCls}">${esc(fmtDate(t.due)) || '—'}</td>
   <td>${riskBadge(t)}</td>
-  ${problem ? `<td class="problem-cell">${esc(problem)}</td>` : '<td class="muted">—</td>'}
+  <td class="${problem ? 'problem-cell' : 'muted'}">${problem || '—'}</td>
 </tr>`;
-  }).join('');
+  }
+
+  const doneSection = done.length ? `
+<tr class="done-toggle-row" id="doneToggleRow">
+  <td colspan="7">
+    <button class="done-toggle" id="doneToggleBtn" onclick="toggleDone()">
+      ▶ 显示已完成任务（${done.length} 项）
+    </button>
+  </td>
+</tr>
+${done.map(t => `<tr class="task-row done-row" data-status="done" data-risk="done" data-owner="${esc((t.owner||'未指派').toLowerCase())}" data-search="${esc(`${t.name} ${t.taskCode||''} ${t.owner||''} ${t._phaseName||''}`.toLowerCase())}" style="display:none">${`
+  <td class="col-task">${linkTask(t)}</td>
+  <td>${badge(t.status)}</td>
+  <td><button class="owner-btn" data-owner-filter="${esc((t.owner||'未指派').toLowerCase())}">${esc(t.owner||'未指派')}</button></td>
+  <td class="col-phase">${esc(t._phaseName)}</td>
+  <td>${esc(fmtDate(t.due)) || '—'}</td>
+  <td>${riskBadge(t)}</td>
+  <td class="muted">—</td>`}
+</tr>`).join('')}` : '';
 
   return `
 <section class="section">
   <div class="section-hd">
-    <div><h2>🧩 Task List</h2><p>问题任务排在最前面，点击负责人可过滤。</p></div>
-    <div class="section-count" id="taskCount">${sorted.length}</div>
+    <div><h2>📋 Task List</h2><p>问题任务排在最前，点击负责人过滤。已完成默认折叠。</p></div>
+    <div class="section-count" id="taskCount">${active.length}</div>
+  </div>
+  <div class="controls-bar" style="margin-bottom:10px">
+    <div class="filter-group">
+      <button class="filter-btn is-active" data-filter="all">全部活跃</button>
+      <button class="filter-btn" data-filter="attention">需关注</button>
+      <button class="filter-btn" data-filter="active">进行中</button>
+      <button class="filter-btn" data-filter="blocked">阻塞</button>
+      <button class="filter-btn" data-filter="overdue">逾期</button>
+      <button class="filter-btn" data-filter="atrisk">风险</button>
+    </div>
+    <input id="taskSearch" class="search-input" type="search" placeholder="搜索任务 / TaskCode / 负责人">
   </div>
   <div class="table-wrap">
     <table class="task-table">
@@ -249,11 +268,16 @@ function renderTaskList(allTasks) {
           <th>阶段</th><th>截止日期</th><th>风险</th><th>问题说明</th>
         </tr>
       </thead>
-      <tbody id="taskTableBody">${rows}</tbody>
+      <tbody id="taskTableBody">
+        ${active.map(row).join('')}
+        ${doneSection}
+      </tbody>
     </table>
   </div>
 </section>`;
 }
+
+// ── Section: By Owner ─────────────────────────────────────────────────────────
 
 function renderOwnerView(allTasks) {
   const active = allTasks.filter(t => t.status !== 'Draft' && t.status !== 'Done');
@@ -262,8 +286,9 @@ function renderOwnerView(allTasks) {
   const map = new Map();
   for (const t of active) {
     const owner = t.owner || '未指派';
-    if (!map.has(owner)) map.set(owner, { blocked:0, overdue:0, atrisk:0, active:0 });
+    if (!map.has(owner)) map.set(owner, { blocked:0, overdue:0, atrisk:0, active:0, tasks:[] });
     const v = map.get(owner);
+    v.tasks.push(t);
     if      (t._risk === 'blocked') v.blocked++;
     else if (t._risk === 'overdue') v.overdue++;
     else if (t._risk === 'atrisk')  v.atrisk++;
@@ -272,34 +297,47 @@ function renderOwnerView(allTasks) {
 
   const cards = [...map.entries()]
     .sort((a,b) => (b[1].blocked+b[1].overdue+b[1].atrisk) - (a[1].blocked+a[1].overdue+a[1].atrisk))
-    .map(([owner, v]) => `
-<button class="owner-card" data-owner-filter="${esc(owner.toLowerCase())}">
+    .map(([owner, v]) => {
+      const hasIssue = v.blocked > 0 || v.overdue > 0 || v.atrisk > 0;
+      const total = v.tasks.length;
+      return `
+<button class="owner-card ${hasIssue ? 'owner-card--issue' : ''}" data-owner-filter="${esc(owner.toLowerCase())}">
   <div class="owner-name">👤 ${esc(owner)}</div>
+  <div class="owner-load">${total} 项活跃任务</div>
   <div class="owner-stats">
     ${v.active  ? `<span class="ostat ostat--active">${v.active} 进行中</span>` : ''}
     ${v.blocked ? `<span class="ostat ostat--blocked">${v.blocked} 阻塞</span>` : ''}
     ${v.overdue ? `<span class="ostat ostat--overdue">${v.overdue} 逾期</span>` : ''}
     ${v.atrisk  ? `<span class="ostat ostat--risk">${v.atrisk} 风险</span>` : ''}
   </div>
-</button>`).join('');
+</button>`;
+    }).join('');
 
   return `
 <section class="section">
   <div class="section-hd">
-    <div><h2>👤 By Owner</h2><p>按负责人看工作负荷与异常，点击卡片过滤任务列表。</p></div>
+    <div><h2>👤 By Owner</h2><p>点击负责人卡片过滤任务列表。有问题的负责人排在前面。</p></div>
   </div>
   <div class="owner-grid">${cards}</div>
 </section>`;
 }
 
+// ── Section: Phase View ───────────────────────────────────────────────────────
+
 function renderPhaseSection(board) {
   if (!board.length) return '';
 
   const items = board.map(ph => {
-    const pct     = safePhaseProgress(ph);
-    const cls     = statusCls(ph.status);
+    const pct       = safePhaseProgress(ph);
+    const cls       = statusCls(ph.status);
     const dateRange = [fmtDate(ph.startDate), fmtDate(ph.due)].filter(Boolean).join(' — ');
-    const isOpen  = ph.status === 'Active' || ph.blocked > 0;
+    const isOpen    = ph.status === 'Active' || ph.blocked > 0;
+    const daysLeft  = daysUntil(ph.due);
+    const daysNote  = daysLeft !== null && ph.status === 'Active'
+      ? (daysLeft < 0 ? `<span class="phase-overdue">已逾期 ${Math.abs(daysLeft)} 天</span>`
+        : daysLeft <= 14 ? `<span class="phase-urgent">${daysLeft} 天后截止</span>`
+        : `<span class="muted">${daysLeft} 天后截止</span>`)
+      : '';
 
     const msRows = ph.milestones.length
       ? ph.milestones.map(m => `<li>${badge(m.status)} ${esc(m.name)}${m.due ? ` <span class="muted">${esc(fmtDate(m.due))}</span>` : ''}</li>`).join('')
@@ -313,19 +351,20 @@ function renderPhaseSection(board) {
 <details class="phase-card"${isOpen ? ' open' : ''}>
   <summary>
     <div class="phase-top">
-      <div>
+      <div class="phase-left">
         <div class="phase-name">${esc(ph.name)}</div>
         <div class="phase-meta">
           ${badge(ph.status)}
           ${dateRange ? `<span class="muted">${esc(dateRange)}</span>` : ''}
+          ${daysNote}
         </div>
+        <div class="phase-task-summary">${ph.done}/${ph.total} 完成 · ${ph.blocked ? `<span style="color:var(--red)">${ph.blocked} 阻塞</span> · ` : ''}${ph.active} 进行中</div>
       </div>
-      <div class="phase-stats">
+      <div class="phase-right">
         <div class="phase-percent">${pct}%</div>
         <div class="prog-track">
           <div class="prog-fill prog-fill--${cls}" style="width:${pct}%"></div>
         </div>
-        <div class="phase-counts">${ph.done}/${ph.total} 完成 · ${ph.blocked} 阻塞 · ${ph.active} 进行中</div>
       </div>
     </div>
   </summary>
@@ -339,11 +378,13 @@ function renderPhaseSection(board) {
   return `
 <section class="section">
   <div class="section-hd">
-    <div><h2>🗂 Phase View</h2><p>阶段视图作为参考视图，用来复盘，不作为第一工作入口。</p></div>
+    <div><h2>🗂 Phase View</h2><p>阶段进度总览，参考视图。</p></div>
   </div>
   <div class="phase-stack">${items}</div>
 </section>`;
 }
+
+// ── Section: Timeline ─────────────────────────────────────────────────────────
 
 function renderTimeline(board) {
   const items = [];
@@ -366,19 +407,17 @@ function renderTimeline(board) {
     const label = it.name.length > 14 ? it.name.slice(0,12)+'…' : it.name;
     const cls   = it.type === 'phase' ? 'tl-phase' : `tl-ms tl-ms--${statusCls(it.status||'pending')}`;
     return `<div class="tl-marker ${cls}" style="left:${pct(it.date)}%" title="${esc(it.name)} — ${esc(fmtDate(it.date))}">
-      <div class="tl-dot"></div>
-      <div class="tl-lbl">${esc(label)}</div>
+      <div class="tl-dot"></div><div class="tl-lbl">${esc(label)}</div>
     </div>`;
   }).join('');
 
   return `
 <section class="section timeline-wrap">
   <div class="section-hd compact">
-    <div><h2>🕒 Timeline</h2><p>时间轴仅作辅助查看。</p></div>
+    <div><h2>🕒 Timeline</h2><p>时间轴辅助查看。</p></div>
   </div>
   <div class="tl-track">
-    <div class="tl-line"></div>
-    ${markers}
+    <div class="tl-line"></div>${markers}
     <div class="tl-today" style="left:${todayPct}%">
       <div class="tl-today-line"></div>
       <div class="tl-today-lbl">Today</div>
@@ -393,32 +432,54 @@ function renderScript() {
   const open  = '<'  + tag + '>';
   const close = '</' + tag + '>';
   const js = `
+let _doneVisible = false;
+function toggleDone() {
+  _doneVisible = !_doneVisible;
+  const rows = document.querySelectorAll('.done-row');
+  const btn  = document.getElementById('doneToggleBtn');
+  rows.forEach(r => r.style.display = _doneVisible ? '' : 'none');
+  if (btn) btn.textContent = _doneVisible
+    ? '▼ 隐藏已完成任务'
+    : '▶ 显示已完成任务（' + rows.length + ' 项）';
+  applyFilters();
+}
+
 (() => {
   const filterBtns = Array.from(document.querySelectorAll('.filter-btn'));
   const ownerBtns  = Array.from(document.querySelectorAll('[data-owner-filter]'));
-  const rows       = Array.from(document.querySelectorAll('.task-row'));
   const search     = document.getElementById('taskSearch');
   const counter    = document.getElementById('taskCount');
   let activeFilter = 'all';
   let ownerFilter  = '';
 
-  function matchFilter(row) {
-    if (ownerFilter && row.dataset.owner !== ownerFilter) return false;
-    if (activeFilter === 'all')       return true;
-    if (activeFilter === 'attention') return ['blocked','overdue','atrisk'].includes(row.dataset.risk);
-    if (activeFilter === 'active')    return row.dataset.status === 'active';
-    if (activeFilter === 'done')      return row.dataset.status === 'done';
-    return row.dataset.risk === activeFilter;
+  function getRows() {
+    return Array.from(document.querySelectorAll('.task-row'));
   }
 
-  function apply() {
+  function matchFilter(row) {
+    if (row.classList.contains('done-row') && !_doneVisible) return false;
+    if (ownerFilter && row.dataset.owner !== ownerFilter) return false;
+    if (activeFilter === 'all')       return row.dataset.status !== 'done' || _doneVisible;
+    if (activeFilter === 'attention') return ['blocked','overdue','atrisk'].includes(row.dataset.risk);
+    if (activeFilter === 'active')    return row.dataset.status === 'active';
+    if (activeFilter === 'blocked')   return row.dataset.risk === 'blocked';
+    if (activeFilter === 'overdue')   return row.dataset.risk === 'overdue';
+    if (activeFilter === 'atrisk')    return row.dataset.risk === 'atrisk';
+    return false;
+  }
+
+  window.applyFilters = function() {
     const q = (search ? search.value : '').trim().toLowerCase();
     let visible = 0;
-    rows.forEach(row => {
+    getRows().forEach(row => {
       const show = matchFilter(row) && (!q || row.dataset.search.includes(q));
-      row.style.display = show ? '' : 'none';
-      if (show) visible++;
+      if (!row.classList.contains('done-row')) {
+        row.style.display = show ? '' : 'none';
+      }
+      if (show && !row.classList.contains('done-row')) visible++;
     });
+    const dtr = document.getElementById('doneToggleRow');
+    if (dtr) dtr.style.display = '';
     if (counter) counter.textContent = visible;
   }
 
@@ -427,7 +488,7 @@ function renderScript() {
     btn.classList.add('is-active');
     activeFilter = btn.dataset.filter;
     ownerFilter  = '';
-    apply();
+    window.applyFilters();
   }));
 
   ownerBtns.forEach(btn => btn.addEventListener('click', () => {
@@ -437,12 +498,12 @@ function renderScript() {
     filterBtns.forEach(x => x.classList.remove('is-active'));
     const allBtn = filterBtns.find(x => x.dataset.filter === 'all');
     if (allBtn) allBtn.classList.add('is-active');
-    apply();
+    window.applyFilters();
     document.querySelector('.task-table')?.scrollIntoView({ behavior:'smooth', block:'start' });
   }));
 
-  if (search) search.addEventListener('input', apply);
-  apply();
+  if (search) search.addEventListener('input', window.applyFilters);
+  window.applyFilters();
 })();
 `;
   return open + js + close;
@@ -469,203 +530,248 @@ export function renderBoard({ board, allBlocked, summary, lastSync }) {
 <style>
 :root {
   --bg:#f4f5f7;
-  --card:#ffffff;
+  --card:#fff;
   --line:#e4e7ed;
   --line-soft:#eef0f4;
   --text:#111827;
-  --text-secondary:#374151;
+  --text-2:#374151;
   --muted:#6b7280;
-  --muted-light:#9ca3af;
+  --muted-l:#9ca3af;
   --blue:#1d4ed8;
-  --blue-light:#dbeafe;
+  --blue-l:#dbeafe;
   --green:#15803d;
-  --green-light:#dcfce7;
+  --green-l:#dcfce7;
   --red:#b91c1c;
-  --red-light:#fee2e2;
+  --red-l:#fee2e2;
   --orange:#c2410c;
-  --orange-light:#ffedd5;
+  --orange-l:#ffedd5;
   --amber:#92400e;
-  --amber-light:#fef3c7;
-  --radius-sm:6px;
-  --radius:10px;
-  --radius-lg:14px;
-  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --amber-l:#fef3c7;
+  --r:10px; --rl:14px; --rs:6px;
+  --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:14px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",sans-serif;
+html{font-size:14px;-webkit-font-smoothing:antialiased}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
 a{color:inherit;text-decoration:none}
 a:hover{text-decoration:underline}
 button{font-family:inherit}
 .wrap{max-width:1200px;margin:0 auto;padding:24px 16px 48px}
+
+/* header */
 .header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;
-  margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.title h1{font-size:20px;font-weight:700;margin-bottom:3px;letter-spacing:-.025em}
-.title p{color:var(--muted);font-size:12px}
-.sync{color:var(--muted-light);font-size:11px;text-align:right;line-height:1.7;flex-shrink:0}
+  margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--line);flex-wrap:wrap}
+.title h1{font-size:19px;font-weight:700;margin-bottom:3px;letter-spacing:-.025em}
+.title p{color:var(--muted);font-size:11.5px}
+.sync{color:var(--muted-l);font-size:11px;text-align:right;line-height:1.7;flex-shrink:0}
 .sync strong{color:var(--muted);font-weight:500}
-.hero-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:16px}
-.hero-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-  padding:14px 12px;box-shadow:var(--shadow)}
-.hero-num{font-size:24px;font-weight:800;line-height:1;letter-spacing:-.03em}
-.hero-lbl{margin-top:6px;font-size:11px;color:var(--muted);line-height:1.45;font-weight:500}
-.hero-lbl span{display:block;color:var(--text-secondary);font-size:10px;font-weight:400;margin-top:1px}
-.hero-card--blocked .hero-num{color:var(--red)}
-.hero-card--overdue .hero-num{color:var(--orange)}
-.hero-card--risk .hero-num{color:var(--amber)}
-.hero-card--active .hero-num{color:var(--blue)}
-.hero-card--done .hero-num{color:var(--green)}
-.hero-card--total .hero-num{color:var(--text)}
-.section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
-  padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+
+/* hero — two-tier */
+.hero-wrap{margin-bottom:16px}
+.hero-primary{background:var(--card);border:1px solid var(--line);border-radius:var(--rl);
+  padding:18px 20px 14px;box-shadow:var(--sh);margin-bottom:8px}
+.hero-primary-label{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:12px}
+.hero-primary-cards{display:flex;gap:12px;flex-wrap:wrap}
+.hpc{display:flex;flex-direction:column;align-items:center;min-width:88px;
+  padding:12px 16px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg)}
+.hpc-num{font-size:32px;font-weight:800;line-height:1;letter-spacing:-.04em}
+.hpc-lbl{font-size:12px;font-weight:500;margin-top:5px;color:var(--text-2)}
+.hpc--blocked .hpc-num{color:var(--red)}
+.hpc--blocked:not(.hpc--zero){background:var(--red-l);border-color:#fca5a5}
+.hpc--overdue .hpc-num{color:var(--orange)}
+.hpc--overdue:not(.hpc--zero){background:var(--orange-l);border-color:#fed7aa}
+.hpc--risk .hpc-num{color:var(--amber)}
+.hpc--risk:not(.hpc--zero){background:var(--amber-l);border-color:#fde68a}
+.hpc--zero .hpc-num{color:var(--muted-l)}
+.hpc--zero .hpc-lbl{color:var(--muted-l)}
+.hero-all-clear{margin-top:10px;font-size:13px;color:var(--green);font-weight:500}
+.hero-secondary{display:flex;align-items:center;gap:8px;padding:0 4px;flex-wrap:wrap}
+.hsc{display:flex;align-items:baseline;gap:4px}
+.hsc-num{font-size:15px;font-weight:700;color:var(--text-2)}
+.hsc-lbl{font-size:11px;color:var(--muted)}
+.hsc-sep{color:var(--line);font-size:13px}
+
+/* section */
+.section{background:var(--card);border:1px solid var(--line);border-radius:var(--rl);
+  padding:16px;margin-bottom:12px;box-shadow:var(--sh)}
 .section--attention{border-color:#fca5a5;border-left:3px solid var(--red)}
 .section-hd{display:flex;justify-content:space-between;align-items:flex-start;
   gap:12px;margin-bottom:12px}
 .section-hd.compact{margin-bottom:8px}
-.section-hd h2{font-size:15px;font-weight:700;margin-bottom:2px;color:var(--text)}
-.section-hd p{margin:0;color:var(--muted);font-size:12px}
-.section-count{min-width:32px;height:32px;border-radius:var(--radius-sm);background:var(--blue-light);
+.section-hd h2{font-size:14px;font-weight:700;margin-bottom:2px}
+.section-hd p{margin:0;color:var(--muted);font-size:11.5px}
+.section-count{min-width:28px;height:28px;border-radius:var(--rs);background:var(--blue-l);
   color:var(--blue);display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:13px;flex-shrink:0}
-.attention-list{display:flex;flex-direction:column;gap:8px}
+  font-weight:700;font-size:12px;flex-shrink:0}
+.section-count--red{background:var(--red-l);color:var(--red)}
+
+/* attention */
+.attention-list{display:flex;flex-direction:column;gap:7px}
 .attention-item{display:flex;justify-content:space-between;gap:12px;
-  border:1px solid var(--line);border-left:3px solid;border-radius:var(--radius);
-  padding:11px 12px;background:#fefefe;cursor:pointer;transition:background .12s}
-.attention-item:hover{background:#fafbff}
+  border:1px solid var(--line);border-left:3px solid;border-radius:var(--r);
+  padding:10px 12px;background:#fefefe;cursor:pointer;transition:background .1s}
+.attention-item:hover{background:#fafaff}
 .attention-item--blocked{border-left-color:var(--red);background:#fff8f8}
 .attention-item--overdue{border-left-color:var(--orange);background:#fffaf7}
 .attention-item--atrisk{border-left-color:var(--amber);background:#fffdf5}
 .attention-main{flex:1;min-width:0}
-.attention-title{font-weight:600;margin-bottom:5px;font-size:13px;
+.attention-title{font-weight:600;margin-bottom:4px;font-size:13px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.attention-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
-.attention-problem{min-width:140px;max-width:240px;color:#7c2d12;
-  font-weight:600;font-size:12px;flex-shrink:0;text-align:right;padding-left:8px}
-.meta-tag{background:#f3f4f6;border-radius:4px;padding:2px 6px;font-size:11px;color:#374151;white-space:nowrap}
+.attention-meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.attention-problem{min-width:120px;max-width:220px;color:#7c2d12;
+  font-weight:600;font-size:11.5px;flex-shrink:0;text-align:right;padding-left:8px}
+.meta-tag{background:#f3f4f6;border-radius:4px;padding:2px 5px;font-size:10.5px;
+  color:#374151;white-space:nowrap}
 .meta-tag--warn{background:#fff7ed;color:#9a3412}
-.empty-box{padding:12px 14px;border:1px dashed var(--line);border-radius:var(--radius);
-  background:#f9fafb;color:var(--muted);font-size:13px}
-.controls-bar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
-.filter-group{display:flex;gap:5px;flex-wrap:wrap}
-.filter-btn{background:#f3f4f6;color:#374151;padding:6px 11px;border-radius:6px;
-  font-weight:500;font-size:12px;border:1px solid transparent;cursor:pointer;
-  transition:background .12s,border-color .12s}
-.filter-btn:hover{background:#e9eaec;border-color:var(--line)}
-.filter-btn.is-active{background:var(--text);color:#fff;border-color:var(--text)}
-.search-input{min-width:200px;max-width:280px;width:100%;padding:6px 10px;
-  border:1px solid var(--line);border-radius:6px;background:var(--card);font-size:12px;color:var(--text)}
-.search-input:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
-.table-wrap{overflow-x:auto;margin:0 -2px}
-.task-table{width:100%;border-collapse:collapse;min-width:780px;font-size:13px}
-.task-table th{text-align:left;font-size:10.5px;letter-spacing:.05em;color:var(--muted);
-  padding:8px 10px;border-bottom:2px solid var(--line);text-transform:uppercase;
-  white-space:nowrap;font-weight:600;background:var(--card)}
-.task-table td{padding:9px 10px;border-bottom:1px solid var(--line-soft);
-  vertical-align:middle;color:var(--text-secondary)}
+
+/* controls */
+.controls-bar{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.filter-group{display:flex;gap:4px;flex-wrap:wrap}
+.filter-btn{background:#f3f4f6;color:#374151;padding:5px 10px;border-radius:5px;
+  font-weight:500;font-size:11.5px;border:1px solid transparent;cursor:pointer;
+  transition:background .1s}
+.filter-btn:hover{background:#e5e7eb}
+.filter-btn.is-active{background:var(--text);color:#fff}
+.search-input{min-width:180px;max-width:260px;width:100%;padding:5px 9px;
+  border:1px solid var(--line);border-radius:5px;background:var(--card);
+  font-size:12px;color:var(--text)}
+.search-input:focus{outline:none;border-color:#93c5fd}
+
+/* task table */
+.table-wrap{overflow-x:auto}
+.task-table{width:100%;border-collapse:collapse;min-width:720px;font-size:12.5px}
+.task-table th{text-align:left;font-size:10px;letter-spacing:.05em;color:var(--muted);
+  padding:7px 9px;border-bottom:2px solid var(--line);text-transform:uppercase;
+  white-space:nowrap;font-weight:600}
+.task-table td{padding:8px 9px;border-bottom:1px solid var(--line-soft);
+  vertical-align:middle;color:var(--text-2)}
 .task-table tbody tr:last-child td{border-bottom:none}
 .task-table tbody tr:hover td{background:#f8faff}
-.task-link{font-weight:600;color:var(--text);font-size:13px}
+.task-link{font-weight:600;color:var(--text);font-size:12.5px}
 .task-link:hover{color:var(--blue)}
-.task-code{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:4px;
+.task-code{display:inline-block;margin-left:5px;padding:1px 4px;border-radius:3px;
   background:#eef2ff;color:#3730a3;font-family:ui-monospace,monospace;
-  font-size:10.5px;font-weight:600;letter-spacing:.02em}
-.col-task{min-width:180px}
-.col-owner{white-space:nowrap}
-.col-phase{color:var(--muted);font-size:12px;white-space:nowrap}
+  font-size:10px;font-weight:600}
+.col-task{min-width:160px}
+.col-phase{color:var(--muted);font-size:11.5px;white-space:nowrap}
 .due--overdue{color:var(--red);font-weight:600}
 .due--soon{color:var(--orange);font-weight:600}
-.problem-cell{max-width:200px;color:#7c2d12;font-size:12px;font-weight:500}
-.muted{color:var(--muted)}
-.owner-btn{background:none;border:none;cursor:pointer;color:var(--text-secondary);
-  font-size:13px;padding:0;text-align:left;font-weight:500}
+.problem-cell{max-width:180px;color:#7c2d12;font-size:11.5px;font-weight:500}
+.muted{color:var(--muted-l);font-size:11.5px}
+.owner-btn{background:none;border:none;cursor:pointer;color:var(--text-2);
+  font-size:12.5px;padding:0;font-weight:500}
 .owner-btn:hover{color:var(--blue);text-decoration:underline}
-.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;
-  font-size:11px;font-weight:600;white-space:nowrap;letter-spacing:.01em}
-.badge--done{background:var(--green-light);color:var(--green)}
-.badge--active{background:var(--blue-light);color:var(--blue)}
-.badge--blocked{background:var(--red-light);color:var(--red)}
+.done-toggle-row td{padding:6px 9px;background:#f9fafb;border-top:1px dashed var(--line)}
+.done-toggle{background:none;border:none;cursor:pointer;color:var(--muted);
+  font-size:11.5px;font-weight:500;padding:0}
+.done-toggle:hover{color:var(--blue)}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;
+  font-size:10.5px;font-weight:600;white-space:nowrap}
+.badge--done{background:var(--green-l);color:var(--green)}
+.badge--active{background:var(--blue-l);color:var(--blue)}
+.badge--blocked{background:var(--red-l);color:var(--red)}
 .badge--draft,.badge--pending{background:#f3f4f6;color:#4b5563}
-.risk{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;
-  font-size:11px;font-weight:600;white-space:nowrap}
-.risk--blocked{background:var(--red-light);color:var(--red)}
-.risk--overdue{background:var(--orange-light);color:var(--orange)}
-.risk--atrisk{background:var(--amber-light);color:var(--amber)}
-.risk--active{background:var(--blue-light);color:var(--blue)}
-.risk--done{background:var(--green-light);color:var(--green)}
+
+/* risk */
+.risk{display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;
+  font-size:10.5px;font-weight:600;white-space:nowrap}
+.risk--blocked{background:var(--red-l);color:var(--red)}
+.risk--overdue{background:var(--orange-l);color:var(--orange)}
+.risk--atrisk{background:var(--amber-l);color:var(--amber)}
+.risk--active{background:var(--blue-l);color:var(--blue)}
+.risk--done{background:var(--green-l);color:var(--green)}
 .risk--normal{background:#f3f4f6;color:var(--muted)}
-.owner-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
-.owner-card{padding:12px 14px;border-radius:var(--radius);background:#fafbff;
+
+/* owner */
+.owner-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.owner-card{padding:12px 14px;border-radius:var(--r);background:#fafbff;
   border:1px solid var(--line);text-align:left;cursor:pointer;
-  transition:border-color .12s,background .12s}
+  transition:border-color .1s,background .1s;width:100%}
 .owner-card:hover{border-color:#93c5fd;background:#eff6ff}
-.owner-name{font-weight:700;margin-bottom:8px;font-size:13px;color:var(--text)}
-.owner-stats{display:flex;flex-wrap:wrap;gap:5px}
-.ostat{display:inline-flex;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
-.ostat--active{background:var(--blue-light);color:var(--blue)}
-.ostat--blocked{background:var(--red-light);color:var(--red)}
-.ostat--overdue{background:var(--orange-light);color:var(--orange)}
-.ostat--risk{background:var(--amber-light);color:var(--amber)}
+.owner-card--issue{border-color:#fca5a5;background:#fff8f8}
+.owner-card--issue:hover{border-color:var(--red);background:#fee2e2}
+.owner-name{font-weight:700;margin-bottom:3px;font-size:13px}
+.owner-load{font-size:11px;color:var(--muted);margin-bottom:7px}
+.owner-stats{display:flex;flex-wrap:wrap;gap:4px}
+.ostat{display:inline-flex;padding:2px 6px;border-radius:4px;font-size:10.5px;font-weight:600}
+.ostat--active{background:var(--blue-l);color:var(--blue)}
+.ostat--blocked{background:var(--red-l);color:var(--red)}
+.ostat--overdue{background:var(--orange-l);color:var(--orange)}
+.ostat--risk{background:var(--amber-l);color:var(--amber)}
+
+/* phase */
 .phase-stack{display:grid;gap:8px}
-.phase-card{border:1px solid var(--line);border-radius:var(--radius-lg);padding:0 14px;background:var(--card)}
+.phase-card{border:1px solid var(--line);border-radius:var(--rl);padding:0 14px;background:var(--card)}
 .phase-card[open]{border-color:#bfdbfe}
 .phase-card summary{list-style:none;padding:12px 0;cursor:pointer;user-select:none}
 .phase-card summary::-webkit-details-marker{display:none}
 .phase-top{display:flex;justify-content:space-between;gap:12px;align-items:center}
-.phase-name{font-size:14px;font-weight:700;margin-bottom:4px;color:var(--text)}
-.phase-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:12px}
-.phase-stats{min-width:200px;flex-shrink:0}
-.phase-percent{text-align:right;font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.02em}
-.prog-track{margin-top:5px;height:6px;background:#e5e7eb;border-radius:999px;overflow:hidden}
-.prog-fill{height:100%;border-radius:999px;transition:width .4s ease}
+.phase-left{flex:1;min-width:0}
+.phase-name{font-size:14px;font-weight:700;margin-bottom:4px}
+.phase-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:12px;margin-bottom:3px}
+.phase-task-summary{font-size:11.5px;color:var(--muted)}
+.phase-overdue{color:var(--red);font-weight:600}
+.phase-urgent{color:var(--orange);font-weight:600}
+.phase-right{min-width:160px;text-align:right;flex-shrink:0}
+.phase-percent{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
+.prog-track{height:6px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.prog-fill{height:100%;border-radius:999px;transition:width .3s}
 .prog-fill--done{background:var(--green)}
 .prog-fill--active{background:var(--blue)}
 .prog-fill--blocked{background:var(--red)}
 .prog-fill--draft,.prog-fill--pending{background:#d1d5db}
-.phase-counts{margin-top:4px;text-align:right;color:var(--muted);font-size:11px}
 .phase-body{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:4px 0 12px}
-.phase-col h4{margin:0 0 6px;font-size:11px;font-weight:700;color:var(--muted);
+.phase-col h4{margin:0 0 6px;font-size:10.5px;font-weight:700;color:var(--muted);
   text-transform:uppercase;letter-spacing:.05em}
 .phase-list{margin:0;padding-left:14px}
-.phase-list li{margin:5px 0;font-size:12px;color:var(--text-secondary)}
-.timeline-wrap .tl-track{position:relative;height:62px;margin-top:6px}
-.tl-line{position:absolute;top:24px;left:0;right:0;height:2px;background:var(--line);border-radius:1px}
+.phase-list li{margin:5px 0;font-size:12px;color:var(--text-2)}
+
+/* timeline */
+.timeline-wrap .tl-track{position:relative;height:60px;margin-top:6px}
+.tl-line{position:absolute;top:22px;left:0;right:0;height:2px;background:var(--line);border-radius:1px}
 .tl-marker{position:absolute;top:0;transform:translateX(-50%);text-align:center}
-.tl-dot{width:10px;height:10px;border-radius:50%;margin:19px auto 4px;
+.tl-dot{width:10px;height:10px;border-radius:50%;margin:17px auto 4px;
   background:#6366f1;border:2px solid var(--card)}
-.tl-phase .tl-dot{width:12px;height:12px;margin-top:18px;background:#1e1b4b}
-.tl-lbl{font-size:10.5px;color:var(--muted);max-width:80px;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+.tl-phase .tl-dot{width:12px;height:12px;margin-top:16px;background:#1e1b4b}
+.tl-lbl{font-size:10px;color:var(--muted);max-width:78px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
 .tl-today{position:absolute;top:0;transform:translateX(-50%)}
-.tl-today-line{width:2px;height:40px;background:var(--red);margin:0 auto;border-radius:1px;opacity:.7}
+.tl-today-line{width:2px;height:36px;background:var(--red);margin:0 auto;opacity:.7}
 .tl-today-lbl{font-size:10px;font-weight:700;text-align:center;margin-top:3px;color:var(--red)}
-.footer{margin-top:32px;padding:18px 0 8px;border-top:1px solid var(--line);text-align:center}
-.footer-brand{font-size:13px;font-weight:700;color:var(--text-secondary);letter-spacing:.04em;margin-bottom:4px}
-.footer-tagline{font-size:11px;color:var(--muted-light);letter-spacing:.03em;margin-bottom:4px}
-.footer-copy{font-size:11px;color:var(--muted-light)}
-@media(max-width:1080px){
-  .hero-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* footer */
+.footer{margin-top:28px;padding:16px 0 6px;border-top:1px solid var(--line);text-align:center}
+.footer-brand{font-size:13px;font-weight:700;color:var(--text-2);letter-spacing:.04em;margin-bottom:3px}
+.footer-tagline{font-size:11px;color:var(--muted-l);letter-spacing:.03em;margin-bottom:3px}
+.footer-copy{font-size:11px;color:var(--muted-l)}
+
+/* misc */
+.empty-box{padding:11px 14px;border:1px dashed var(--line);border-radius:var(--r);
+  background:#f9fafb;color:var(--muted);font-size:13px}
+
+@media(max-width:960px){
   .phase-top{flex-direction:column;align-items:flex-start}
-  .phase-stats{min-width:auto;width:100%}
-  .phase-counts,.phase-percent{text-align:left}
+  .phase-right{text-align:left;min-width:auto;width:100%}
   .phase-body{grid-template-columns:1fr}
 }
 @media(max-width:720px){
   .wrap{padding:14px 12px 36px}
   .header{flex-direction:column;align-items:flex-start}
-  .hero-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hero-primary-cards{gap:8px}
+  .hpc{min-width:72px;padding:10px 12px}
+  .hpc-num{font-size:26px}
   .attention-item{flex-direction:column}
   .attention-problem{max-width:none;min-width:0;text-align:left;padding-left:0}
   .search-input{min-width:0;width:100%}
   .section-hd{flex-direction:column}
-  .section-count{width:32px}
-  .filter-group{width:100%}
   .tl-lbl{display:none}
-  .hero-card--total{display:none}
 }
-@media(max-width:460px){
-  .hero-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .hero-card--risk,.hero-card--total{display:none}
+@media(max-width:480px){
+  .hpc--zero{display:none}
 }
 </style>
 <body>
@@ -676,15 +782,13 @@ button{font-family:inherit}
       <p>${esc(title)} &nbsp;·&nbsp; Notion → GitHub Pages</p>
     </div>
     <div class="sync">
-      <strong>Last sync</strong><br>
-      ${esc(syncTime)}<br>
-      <span style="opacity:.7;font-size:10px">${esc(domain)}</span>
+      <strong>Last sync</strong><br>${esc(syncTime)}<br>
+      <span style="opacity:.6;font-size:10px">${esc(domain)}</span>
     </div>
   </header>
 
   ${renderHeroGrid(summary, allTasks)}
   ${renderAttentionZone(allTasks)}
-  ${renderControls()}
   ${renderTaskList(allTasks)}
   ${renderOwnerView(allTasks)}
   ${renderPhaseSection(board)}

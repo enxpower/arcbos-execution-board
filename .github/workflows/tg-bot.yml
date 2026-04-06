@@ -4,18 +4,22 @@ name: Bot — Telegram Poll
 # Polls Telegram every 5 minutes. Parses task commands. Writes to Notion.
 # State (last_update_id) persisted via actions/cache between runs.
 #
-# After writing to Notion, conditionally triggers board-publish if
-# debounce period has passed (controlled by BOARD_REFRESH_DEBOUNCE_SEC).
+# After writing to Notion, conditionally triggers board-publish via
+# workflow_call if debounce period has passed.
+#
+# permissions: contents: write is required because the called workflow
+# (board-publish.yml) requests contents: write to push to gh-pages branch.
+# A caller workflow cannot grant permissions beyond its own scope.
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'   # 改成每6小时一次，仅作兜底
+    - cron: '0 */6 * * *'
 
 permissions:
-  contents: write
-  actions:  write   # needed to trigger board-publish via workflow_dispatch
+  contents: write   # required: board-publish.yml (called via workflow_call) needs contents: write
+  actions:  write   # required: to trigger board-publish via workflow_call
 
 concurrency:
   group: tg-bot

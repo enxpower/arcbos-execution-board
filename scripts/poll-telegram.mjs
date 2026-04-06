@@ -23,6 +23,20 @@ const log = createLogger('tg-bot');
 
 requireBotConfig();
 
+// ── Per-chat task index cache (for numeric shortcuts) ─────────────────────────
+// Stores the last task list sent to each chat so engineers can use '完成 1' etc.
+const taskIndexCache = new Map(); // chatId -> Task[]
+
+function setChatTasks(chatId, tasks) {
+  taskIndexCache.set(String(chatId), tasks);
+}
+
+function getTaskByIndex(chatId, index) {
+  const tasks = taskIndexCache.get(String(chatId)) || [];
+  return tasks[index] || null;
+}
+
+
 const runId = Date.now().toString(36).toUpperCase();
 log.info('Bot poll started', { runId, dryRun: cfg.dryRun });
 
@@ -286,6 +300,29 @@ async function handleSearch(query) {
   ].join('\n');
 }
 
+// ── Shortcut handler ────────────────────────────────────────────────────────
+async function handleShortcut(chatId, parsed, actor) {
+  const { action, index, reason } = parsed;
+  const task = getTaskByIndex(chatId, index);
+
+  if (!task) {
+    return [
+      '❓ <b>序号无效</b>',
+      '─────────────────────',
+      `序号 ${index + 1} 不存在。`,
+      '',
+      '请先发送 <b>搜索 关键词</b> 或 <b>帮助</b> 查看任务列表，再使用序号。',
+      SYS_TAG,
+    ].join('\n');
+  }
+
+  if (action === 'done')     return (await handleDone(chatId, task.taskCode || task.name, actor)).reply;
+  if (action === 'block')    return (await handleBlock(chatId, task.taskCode || task.name, reason, actor)).reply;
+  if (action === 'activate') return (await handleActivate(chatId, task.taskCode || task.name, actor)).reply;
+  if (action === 'progress') return (await handleProgress(chatId, task.taskCode || task.name)).reply;
+  return buildErrorReply('未知快捷操作。');
+}
+
 // ── Process updates ─────────────────────────────────────────────────────────
 
 for (const upd of updates) {
@@ -318,6 +355,7 @@ for (const upd of updates) {
       case CMD.ACTIVATE: reply = await handleActivate(chatId, parsed.query, from);            break;
       case CMD.PROGRESS: reply = await handleProgress(chatId, parsed.query);                  break;
       case CMD.SEARCH:   reply = await handleSearch(parsed.query);                            break;
+      case CMD.SHORTCUT: reply = await handleShortcut(chatId, parsed, from);                  break;
       case CMD.HELP:     reply = HELP_TEXT;                                                    break;
       default:
         reply = buildErrorReply(

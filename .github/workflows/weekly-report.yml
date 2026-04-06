@@ -1,0 +1,38 @@
+name: Bot — Weekly Report
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every Friday 09:30 Beijing time = 01:30 UTC
+    - cron: '30 1 * * 5'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-report
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Send weekly report
+        run: node scripts/weekly-report.mjs
+        env:
+          TG_BOT_TOKEN:     ${{ secrets.TG_BOT_TOKEN }}
+          NOTION_TOKEN:     ${{ secrets.NOTION_TOKEN }}
+          BOARD_DB_ID:      ${{ vars.BOARD_DB_ID }}
+          DIGEST_CHAT_ID:   ${{ vars.DIGEST_CHAT_ID }}
+          DIGEST_BOARD_URL: ${{ vars.DIGEST_BOARD_URL || 'https://board.arcbos.com' }}
+          NOTION_GAP_MS:    ${{ vars.NOTION_GAP_MS || '600' }}
+          LOG_LEVEL:        info
