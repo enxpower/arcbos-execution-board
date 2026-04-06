@@ -513,7 +513,7 @@ function renderScript() {
   if (search) search.addEventListener('input', apply);
   apply();
 })();
-</script>`;
+<\/script>\`;
 }
 
 // ── Full page ─────────────────────────────────────────────────────────────────
