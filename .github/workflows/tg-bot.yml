@@ -14,8 +14,7 @@ name: Bot — Telegram Poll
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */6 * * *'
+  
 
 permissions:
   contents: write   # required: board-publish.yml (called via workflow_call) needs contents: write
