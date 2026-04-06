@@ -1,0 +1,45 @@
+name: Bot — Stale Task Check
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Checks for Active tasks that haven't been updated in STALE_DAYS days.
+# Sends a nudge to the group tagging each owner with copy-paste commands.
+#
+# Runs every weekday at 15:00 Beijing time (07:00 UTC).
+# Also runs manually for testing.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 7 * * 1-5'   # Mon–Fri 15:00 CST / 07:00 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stale-check
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run stale check
+        run: node scripts/stale-check.mjs
+        env:
+          TG_BOT_TOKEN:     ${{ secrets.TG_BOT_TOKEN }}
+          NOTION_TOKEN:     ${{ secrets.NOTION_TOKEN }}
+          BOARD_DB_ID:      ${{ vars.BOARD_DB_ID }}
+          DIGEST_CHAT_ID:   ${{ vars.DIGEST_CHAT_ID }}
+          DIGEST_BOARD_URL: ${{ vars.DIGEST_BOARD_URL || 'https://board.arcbos.com' }}
+          STALE_DAYS:       ${{ vars.STALE_DAYS || '2' }}
+          LOG_LEVEL:        info

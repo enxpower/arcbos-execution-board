@@ -1,5 +1,5 @@
 // scripts/weekly-report.mjs
-// Weekly executive summary for Founder — sent every Friday
+// v1.2 — Founder-only, decision-grade, minimal noise
 // ─────────────────────────────────────────────────────────────────────────────
 import { cfg } from '../src/lib/config.mjs';
 import { createLogger } from '../src/lib/logger.mjs';
@@ -42,12 +42,12 @@ async function fetchAllTasks() {
   return rows.map(page => {
     const p = page.properties;
     return {
-      name:     propText(p, 'Name'),
-      taskCode: propText(p, 'TaskCode'),
-      status:   propSelect(p, 'Status'),
-      owner:    propText(p, 'Owner') || '未指派',
-      phase:    propText(p, 'Phase'),
-      due:      propDate(p, 'Due'),
+      name:      propText(p, 'Name'),
+      taskCode:  propText(p, 'TaskCode'),
+      status:    propSelect(p, 'Status'),
+      owner:     propText(p, 'Owner') || '未指派',
+      phase:     propText(p, 'Phase'),
+      due:       propDate(p, 'Due'),
       blockedBy: propText(p, 'BlockedBy'),
     };
   }).filter(t => t.name);
@@ -80,81 +80,94 @@ const active  = tasks.filter(t => t.status === 'Active');
 const blocked = tasks.filter(t => t.status === 'Blocked');
 const draft   = tasks.filter(t => t.status === 'Draft');
 const overdue = active.filter(t => { const d = daysUntil(t.due); return d !== null && d < 0; });
-const atrisk  = active.filter(t => { const d = daysUntil(t.due); return d !== null && d >= 0 && d <= 7; });
 
 const weekNum = Math.ceil((new Date() - new Date(new Date().getFullYear(), 0, 1)) / 604800000);
-const today   = new Date().toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric' });
+const today   = new Date().toLocaleDateString('zh-CN', {
+  year:'numeric', month:'long', day:'numeric',
+});
+
+// ── One-line verdict ──────────────────────────────────────────────────────────
+const isHealthy = blocked.length === 0 && overdue.length === 0;
+const verdict   = isHealthy
+  ? `✅ <b>本周执行健康</b>`
+  : `⚠️ <b>本周有问题需处理</b>`;
 
 const lines = [
-  `📊 <b>ARCBOS 周报 · Week ${weekNum}</b>`,
-  `📅 ${today}`,
+  `${verdict}`,
+  `📊 Week ${weekNum} · ${today}`,
+  `<a href="${BOARD_URL}">打开完整看板 →</a>`,
   '═════════════════════',
-  '',
-  '<b>整体执行状态</b>',
-  `✅ 已完成   ${done.length} 项`,
-  `🔵 进行中   ${active.length} 项`,
-  `🔴 阻塞中   ${blocked.length} 项`,
-  `🟠 已逾期   ${overdue.length} 项`,
-  `🟡 7天内到期 ${atrisk.length} 项`,
-  `🔒 待审批   ${draft.length} 项`,
-  `📦 任务总计  ${tasks.length} 项`,
 ];
 
-// Phase progress
+// ── Phase progress — the most important view for Founder ──────────────────────
 if (phases.length) {
-  lines.push('', '<b>阶段进度</b>');
+  lines.push('<b>阶段进度</b>');
   for (const ph of phases) {
-    const phTasks  = tasks.filter(t => t.phase.toLowerCase() === ph.name.toLowerCase());
-    const phDone   = phTasks.filter(t => t.status === 'Done').length;
-    const pct      = phTasks.length ? Math.round((phDone / phTasks.length) * 100) : 0;
-    const daysLeft = daysUntil(ph.due);
-    const dueNote  = daysLeft !== null
-      ? (daysLeft < 0 ? ` · ⚠️ 已逾期 ${Math.abs(daysLeft)} 天`
-        : ` · ${daysLeft} 天后截止`)
-      : '';
-    const statusIcon = ph.status === 'Done' ? '✅' : ph.status === 'Active' ? '🔵' : '⏸';
-    lines.push(`${statusIcon} ${ph.name}：${pct}% (${phDone}/${phTasks.length})${dueNote}`);
+    const phTasks = tasks.filter(t => t.phase.toLowerCase() === ph.name.toLowerCase());
+    const phDone  = phTasks.filter(t => t.status === 'Done').length;
+    const pct     = phTasks.length ? Math.round((phDone / phTasks.length) * 100) : 0;
+    const dl      = daysUntil(ph.due);
+    const dueNote = dl === null ? ''
+      : dl < 0  ? ` · ⚠️ 逾期${Math.abs(dl)}天`
+      : dl <= 14 ? ` · ⏰ ${dl}天后截止`
+      : ` · ${dl}天后截止`;
+    const icon    = ph.status === 'Done' ? '✅' : ph.status === 'Active' ? '🔵' : '⏸';
+    const bar     = '█'.repeat(Math.round(pct/10)) + '░'.repeat(10-Math.round(pct/10));
+    lines.push(`${icon} ${ph.name}`);
+    lines.push(`   ${bar} ${pct}%  ${phDone}/${phTasks.length} 完成${dueNote}`);
+  }
+  lines.push('');
+}
+
+// ── Numbers ───────────────────────────────────────────────────────────────────
+lines.push('<b>本周数字</b>');
+lines.push(`✅ 已完成  ${done.length} 项`);
+lines.push(`🔵 进行中  ${active.length} 项`);
+lines.push(`🔴 阻塞中  ${blocked.length} 项`);
+lines.push(`🟠 已逾期  ${overdue.length} 项`);
+if (draft.length) lines.push(`🔒 待审批  ${draft.length} 项  ← 需要你批`);
+
+// ── Action items for Founder — only what needs Founder decision ───────────────
+const actionItems = [];
+
+if (blocked.length) {
+  actionItems.push('');
+  actionItems.push('<b>需要你介入的阻塞：</b>');
+  for (const t of blocked) {
+    actionItems.push(`🔴 ${t.name}${t.taskCode ? ` [${t.taskCode}]` : ''} · ${t.owner}`);
+    if (t.blockedBy) actionItems.push(`   → ${t.blockedBy}`);
   }
 }
 
-// Issues requiring Founder attention
-const issues = [];
-if (blocked.length) {
-  issues.push('', '<b>需要 Founder 关注</b>');
-  for (const t of blocked) {
-    const ref = t.taskCode || t.name;
-    issues.push(`🔴 ${t.name}${t.taskCode ? ` [${t.taskCode}]` : ''} · ${t.owner}`);
-    if (t.blockedBy) issues.push(`   原因：${t.blockedBy}`);
-  }
-}
-if (overdue.length && !blocked.length) {
-  issues.push('', '<b>逾期任务</b>');
+if (overdue.length) {
+  actionItems.push('');
+  actionItems.push('<b>逾期未完成：</b>');
   for (const t of overdue) {
     const dd = Math.abs(daysUntil(t.due));
-    issues.push(`🟠 ${t.name} · ${t.owner} · 已逾期 ${dd} 天`);
+    actionItems.push(`🟠 ${t.name}${t.taskCode ? ` [${t.taskCode}]` : ''} · ${t.owner} · 逾期${dd}天`);
   }
 }
+
 if (draft.length) {
-  issues.push('', `<b>待审批任务 (${draft.length} 项)</b>`, '以下任务等待 Founder 在 Notion 中将状态改为 Active：');
+  actionItems.push('');
+  actionItems.push('<b>等待审批（在 Notion 改 Active）：</b>');
   for (const t of draft) {
-    issues.push(`🔒 ${t.name}${t.taskCode ? ` [${t.taskCode}]` : ''} · ${t.owner}`);
+    actionItems.push(`🔒 ${t.name}${t.taskCode ? ` [${t.taskCode}]` : ''} · ${t.owner}`);
   }
 }
 
-lines.push(...issues);
-
-// Overall health assessment
-lines.push('', '═════════════════════');
-if (blocked.length === 0 && overdue.length === 0) {
-  lines.push('✅ 本周执行健康，无阻塞或逾期项。');
-} else if (blocked.length > 0) {
-  lines.push(`⚠️ 有 ${blocked.length} 个阻塞项需要 Founder 介入解决。`);
-} else {
-  lines.push(`⚠️ 有 ${overdue.length} 个任务已逾期，请跟进。`);
+if (actionItems.length) {
+  lines.push(...actionItems);
 }
 
-lines.push(`\n<a href="${BOARD_URL}">查看完整看板 →</a>`);
+lines.push('');
+lines.push('═════════════════════');
+lines.push(isHealthy
+  ? '项目执行正常，继续保持。'
+  : '请处理上述阻塞/逾期项，防止延误。');
 lines.push('\n<code>ARCBOS · Execution System</code>');
 
 await sendMessage(chatId, lines.join('\n'));
-log.info('Weekly report sent', { tasks: tasks.length, blocked: blocked.length });
+log.info('Weekly report sent', {
+  tasks: tasks.length, blocked: blocked.length, overdue: overdue.length,
+});
