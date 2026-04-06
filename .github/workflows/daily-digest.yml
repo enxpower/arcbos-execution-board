@@ -1,0 +1,53 @@
+name: Bot — Daily Digest
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sends daily task digest to Telegram group every weekday morning.
+#
+# Reads all Active/Blocked tasks from Notion.
+# Groups by Owner. Sends:
+#   1. Team summary (total counts, blocked/overdue highlight)
+#   2. One message per owner listing their tasks
+#
+# Required secrets: TG_BOT_TOKEN, NOTION_TOKEN
+# Required variables: BOARD_DB_ID, DIGEST_CHAT_ID
+# Optional variables: DIGEST_BOARD_URL, DIGEST_CRON, NOTION_GAP_MS
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:      # manual trigger for testing
+  schedule:
+    # Default: 09:00 Beijing time = 01:00 UTC
+    # Override by setting DIGEST_CRON variable (not supported natively,
+    # change the cron line below to match your team timezone)
+    - cron: '0 1 * * 1-5'   # Mon–Fri 09:00 CST / 01:00 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-digest
+  cancel-in-progress: true
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Send daily digest
+        run: node scripts/daily-digest.mjs
+        env:
+          TG_BOT_TOKEN:    ${{ secrets.TG_BOT_TOKEN }}
+          NOTION_TOKEN:    ${{ secrets.NOTION_TOKEN }}
+          BOARD_DB_ID:     ${{ vars.BOARD_DB_ID }}
+          DIGEST_CHAT_ID:  ${{ vars.DIGEST_CHAT_ID }}
+          DIGEST_BOARD_URL: ${{ vars.DIGEST_BOARD_URL || 'https://board.arcbos.com' }}
+          NOTION_GAP_MS:   ${{ vars.NOTION_GAP_MS || '600' }}
+          LOG_LEVEL:       info
