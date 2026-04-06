@@ -1,23 +1,8 @@
 // src/core/board-renderer.mjs
-// ─────────────────────────────────────────────────────────────────────────────
-// Operational board renderer — unified final version.
-//
-// Architecture: our v2 (Notion pipeline, correct data contract)
-// UI/UX: best of ChatGPT v3 (hero cards, filter bar, <details> phases,
-//         daysUntil, dueSoon, problemText, client-side filter+search)
-//
-// Data contract (from board-builder.mjs):
-//   board[]     — Phase objects each with .milestones[], .tasks[], .pct etc.
-//   allBlocked  — Task[] where status === 'Blocked'
-//   summary     — { totalTasks, totalDone, totalActive, totalBlocked, totalDraft }
-//   lastSync    — ISO string
-//
+// v1.0.1 — fixed duplicate renderScript + </script> tag escape
 // Pure function — no Notion calls, no file I/O.
-// ─────────────────────────────────────────────────────────────────────────────
 
 import { cfg } from '../lib/config.mjs';
-
-// ── Escape & format ───────────────────────────────────────────────────────────
 
 function esc(s) {
   return String(s ?? '')
@@ -34,8 +19,6 @@ function fmtDate(d) {
   } catch { return String(d); }
 }
 
-// ── Date utilities ────────────────────────────────────────────────────────────
-
 function todayStart() {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -51,17 +34,14 @@ function daysUntil(d) {
   return Math.round((dt - t) / 86400000);
 }
 
-// ── Risk classification ───────────────────────────────────────────────────────
-
 function computeRisk(task) {
   const s  = (task.status || '').toLowerCase();
   const dd = daysUntil(task.due);
-
-  if (s === 'blocked')                              return 'blocked';
-  if (s !== 'done' && dd !== null && dd < 0)        return 'overdue';
-  if (s === 'active' && dd !== null && dd <= 3)     return 'atrisk';
-  if (s === 'done')                                 return 'done';
-  if (s === 'active')                               return 'active';
+  if (s === 'blocked')                          return 'blocked';
+  if (s !== 'done' && dd !== null && dd < 0)   return 'overdue';
+  if (s === 'active' && dd !== null && dd <= 3) return 'atrisk';
+  if (s === 'done')                             return 'done';
+  if (s === 'active')                           return 'active';
   return 'normal';
 }
 
@@ -80,25 +60,16 @@ function compareTasks(a, b) {
   return (a.name || '').localeCompare(b.name || '');
 }
 
-// ── Enrich tasks with computed fields ─────────────────────────────────────────
-
 function enrichTasks(board) {
   const all = [];
   for (const ph of board) {
     for (const t of ph.tasks) {
       const dd = daysUntil(t.due);
-      all.push({
-        ...t,
-        _phaseName: ph.name,
-        _dueDays:   dd,
-        _risk:      computeRisk(t),
-      });
+      all.push({ ...t, _phaseName: ph.name, _dueDays: dd, _risk: computeRisk(t) });
     }
   }
   return all;
 }
-
-// ── Status helpers ────────────────────────────────────────────────────────────
 
 const STATUS_ZH = {
   Done:'已完成', Active:'进行中', Blocked:'阻塞',
@@ -115,8 +86,6 @@ function badge(s) {
   return `<span class="badge badge--${cls}">${esc(s)}（${esc(zh)}）</span>`;
 }
 
-// ── Risk badge ────────────────────────────────────────────────────────────────
-
 const RISK_META = {
   blocked: { emoji:'🔴', label:'Blocked（阻塞）' },
   overdue:  { emoji:'🟠', label:'Overdue（逾期）' },
@@ -131,8 +100,6 @@ function riskBadge(task) {
   return `<span class="risk risk--${task._risk}">${m.emoji} ${esc(m.label)}</span>`;
 }
 
-// ── Problem summary ───────────────────────────────────────────────────────────
-
 function problemText(task) {
   if (task.status === 'Blocked') return task.blockedBy || 'Blocked — 原因未填写';
   if (task._risk === 'overdue')  return `已逾期 ${Math.abs(task._dueDays)} 天`;
@@ -141,31 +108,22 @@ function problemText(task) {
   return '';
 }
 
-// ── Notion link ───────────────────────────────────────────────────────────────
-
 function notionUrl(pageId) {
   return `https://notion.so/${String(pageId).replace(/-/g, '')}`;
 }
 
 function linkTask(task) {
   const name = esc(task.name || 'Untitled');
-  const code = task.taskCode
-    ? `<span class="task-code">${esc(task.taskCode)}</span>` : '';
+  const code = task.taskCode ? `<span class="task-code">${esc(task.taskCode)}</span>` : '';
   return `<a class="task-link" href="${esc(notionUrl(task.id))}" target="_blank" rel="noopener">${name}${code}</a>`;
 }
 
-// ── Phase progress — cap Active at 99% ───────────────────────────────────────
-
 function safePhaseProgress(ph) {
-  if (ph.status === 'Done')   return 100;
+  if (ph.status === 'Done') return 100;
   const pct = ph.total ? Math.round((ph.done / ph.total) * 100) : 0;
   if (ph.status === 'Active' && pct >= 100) return 99;
   return pct;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Section renderers
-// ─────────────────────────────────────────────────────────────────────────────
 
 function renderHeroGrid(summary, allTasks) {
   const overdue = allTasks.filter(t => t._risk === 'overdue').length;
@@ -259,9 +217,8 @@ function renderTaskList(allTasks) {
 
   const rows = sorted.map(t => {
     const problem = problemText(t);
-    const dueCls = t._risk === 'overdue' ? 'due--overdue'
-                 : t._risk === 'atrisk'  ? 'due--soon'
-                 : '';
+    const dueCls  = t._risk === 'overdue' ? 'due--overdue'
+                  : t._risk === 'atrisk'  ? 'due--soon' : '';
     return `
 <tr class="task-row"
   data-status="${esc((t.status||'').toLowerCase())}"
@@ -339,10 +296,10 @@ function renderPhaseSection(board) {
   if (!board.length) return '';
 
   const items = board.map(ph => {
-    const pct = safePhaseProgress(ph);
-    const cls = statusCls(ph.status);
+    const pct     = safePhaseProgress(ph);
+    const cls     = statusCls(ph.status);
     const dateRange = [fmtDate(ph.startDate), fmtDate(ph.due)].filter(Boolean).join(' — ');
-    const isOpen = ph.status === 'Active' || ph.blocked > 0;
+    const isOpen  = ph.status === 'Active' || ph.blocked > 0;
 
     const msRows = ph.milestones.length
       ? ph.milestones.map(m => `<li>${badge(m.status)} ${esc(m.name)}${m.due ? ` <span class="muted">${esc(fmtDate(m.due))}</span>` : ''}</li>`).join('')
@@ -430,38 +387,12 @@ function renderTimeline(board) {
 </section>`;
 }
 
-// ── Client-side filter + search script ───────────────────────────────────────
 
 function renderScript() {
-  return `
-<script>
-(() => {
-  const filterBtns = Array.from(document.querySelectorAll('.filter-btn'));
-  const ownerBtns  = Array.from(document.querySelectorAll('[data-owner-filter]'));
-  const rows       = Array.from(document.querySelectorAll('.task-row'));
-  const search     = document.getElementById('taskSearch');
-  const counter    = document.getElementById('taskCount');
-  let activeFilter = 'all';
-  let ownerFilter  = '';
-
-  function matchFilter(row) {
-    if (ownerFilter && row.dataset.owner !== ownerFilter) return false;
-    if (activeFilter === 'all')       return true;
-    if (activeFilter === 'attention') return ['blocked','overdue','atrisk'].includes(row.dataset.risk);
-    if (activeFilter === 'active')    return row.dataset.status === 'active';
-    if (activeFilter === 'done')      return row.dataset.status === 'done';
-    return row.dataset.risk === activeFilter;
-  }
-
-  function apply() {
-    const q = (search ? search.value : '').trim().toLowerCase();
-    let visible = 0;
-    rows.forEach(row => {
-// ── Client-side filter + search script ───────────────────────────────────────
-
-function renderScript() {
-  return `
-<script>
+  const tag = 'script';
+  const open  = '<'  + tag + '>';
+  const close = '</' + tag + '>';
+  const js = `
 (() => {
   const filterBtns = Array.from(document.querySelectorAll('.filter-btn'));
   const ownerBtns  = Array.from(document.querySelectorAll('[data-owner-filter]'));
@@ -513,10 +444,10 @@ function renderScript() {
   if (search) search.addEventListener('input', apply);
   apply();
 })();
-<\/script>\`;
+`;
+  return open + js + close;
 }
 
-// ── Full page ─────────────────────────────────────────────────────────────────
 
 export function renderBoard({ board, allBlocked, summary, lastSync }) {
   const title    = cfg.boardTitle;
@@ -559,7 +490,6 @@ export function renderBoard({ board, allBlocked, summary, lastSync }) {
   --radius:10px;
   --radius-lg:14px;
   --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
-  --shadow-md:0 2px 8px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.05);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
@@ -569,16 +499,12 @@ a{color:inherit;text-decoration:none}
 a:hover{text-decoration:underline}
 button{font-family:inherit}
 .wrap{max-width:1200px;margin:0 auto;padding:24px 16px 48px}
-
-/* ── header ── */
 .header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;
   margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.title h1{font-size:20px;font-weight:700;margin-bottom:3px;letter-spacing:-.025em;color:var(--text)}
-.title p{color:var(--muted);font-size:12px;letter-spacing:.01em}
+.title h1{font-size:20px;font-weight:700;margin-bottom:3px;letter-spacing:-.025em}
+.title p{color:var(--muted);font-size:12px}
 .sync{color:var(--muted-light);font-size:11px;text-align:right;line-height:1.7;flex-shrink:0}
 .sync strong{color:var(--muted);font-weight:500}
-
-/* ── hero grid ── */
 .hero-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:16px}
 .hero-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
   padding:14px 12px;box-shadow:var(--shadow)}
@@ -591,8 +517,6 @@ button{font-family:inherit}
 .hero-card--active .hero-num{color:var(--blue)}
 .hero-card--done .hero-num{color:var(--green)}
 .hero-card--total .hero-num{color:var(--text)}
-
-/* ── section ── */
 .section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
   padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
 .section--attention{border-color:#fca5a5;border-left:3px solid var(--red)}
@@ -604,8 +528,6 @@ button{font-family:inherit}
 .section-count{min-width:32px;height:32px;border-radius:var(--radius-sm);background:var(--blue-light);
   color:var(--blue);display:flex;align-items:center;justify-content:center;
   font-weight:700;font-size:13px;flex-shrink:0}
-
-/* ── attention zone ── */
 .attention-list{display:flex;flex-direction:column;gap:8px}
 .attention-item{display:flex;justify-content:space-between;gap:12px;
   border:1px solid var(--line);border-left:3px solid;border-radius:var(--radius);
@@ -620,13 +542,10 @@ button{font-family:inherit}
 .attention-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .attention-problem{min-width:140px;max-width:240px;color:#7c2d12;
   font-weight:600;font-size:12px;flex-shrink:0;text-align:right;padding-left:8px}
-.meta-tag{background:#f3f4f6;border-radius:4px;padding:2px 6px;font-size:11px;color:#374151;
-  white-space:nowrap}
+.meta-tag{background:#f3f4f6;border-radius:4px;padding:2px 6px;font-size:11px;color:#374151;white-space:nowrap}
 .meta-tag--warn{background:#fff7ed;color:#9a3412}
-.empty-attention{padding:12px 14px;border:1px dashed var(--line);border-radius:var(--radius);
-  background:#f9fafb;color:var(--muted);font-size:13px;text-align:center}
-
-/* ── controls ── */
+.empty-box{padding:12px 14px;border:1px dashed var(--line);border-radius:var(--radius);
+  background:#f9fafb;color:var(--muted);font-size:13px}
 .controls-bar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
 .filter-group{display:flex;gap:5px;flex-wrap:wrap}
 .filter-btn{background:#f3f4f6;color:#374151;padding:6px 11px;border-radius:6px;
@@ -635,11 +554,8 @@ button{font-family:inherit}
 .filter-btn:hover{background:#e9eaec;border-color:var(--line)}
 .filter-btn.is-active{background:var(--text);color:#fff;border-color:var(--text)}
 .search-input{min-width:200px;max-width:280px;width:100%;padding:6px 10px;
-  border:1px solid var(--line);border-radius:6px;background:var(--card);
-  font-size:12px;color:var(--text)}
+  border:1px solid var(--line);border-radius:6px;background:var(--card);font-size:12px;color:var(--text)}
 .search-input:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
-
-/* ── task table ── */
 .table-wrap{overflow-x:auto;margin:0 -2px}
 .task-table{width:100%;border-collapse:collapse;min-width:780px;font-size:13px}
 .task-table th{text-align:left;font-size:10.5px;letter-spacing:.05em;color:var(--muted);
@@ -659,22 +575,17 @@ button{font-family:inherit}
 .col-phase{color:var(--muted);font-size:12px;white-space:nowrap}
 .due--overdue{color:var(--red);font-weight:600}
 .due--soon{color:var(--orange);font-weight:600}
-.due--normal{color:var(--muted)}
 .problem-cell{max-width:200px;color:#7c2d12;font-size:12px;font-weight:500}
-.muted-cell{color:var(--muted-light);font-size:12px}
+.muted{color:var(--muted)}
 .owner-btn{background:none;border:none;cursor:pointer;color:var(--text-secondary);
   font-size:13px;padding:0;text-align:left;font-weight:500}
 .owner-btn:hover{color:var(--blue);text-decoration:underline}
-
-/* ── badges ── */
 .badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;
   font-size:11px;font-weight:600;white-space:nowrap;letter-spacing:.01em}
 .badge--done{background:var(--green-light);color:var(--green)}
 .badge--active{background:var(--blue-light);color:var(--blue)}
 .badge--blocked{background:var(--red-light);color:var(--red)}
 .badge--draft,.badge--pending{background:#f3f4f6;color:#4b5563}
-
-/* ── risk tags ── */
 .risk{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;
   font-size:11px;font-weight:600;white-space:nowrap}
 .risk--blocked{background:var(--red-light);color:var(--red)}
@@ -683,8 +594,6 @@ button{font-family:inherit}
 .risk--active{background:var(--blue-light);color:var(--blue)}
 .risk--done{background:var(--green-light);color:var(--green)}
 .risk--normal{background:#f3f4f6;color:var(--muted)}
-
-/* ── owner grid ── */
 .owner-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
 .owner-card{padding:12px 14px;border-radius:var(--radius);background:#fafbff;
   border:1px solid var(--line);text-align:left;cursor:pointer;
@@ -697,11 +606,8 @@ button{font-family:inherit}
 .ostat--blocked{background:var(--red-light);color:var(--red)}
 .ostat--overdue{background:var(--orange-light);color:var(--orange)}
 .ostat--risk{background:var(--amber-light);color:var(--amber)}
-
-/* ── phase section ── */
 .phase-stack{display:grid;gap:8px}
-.phase-card{border:1px solid var(--line);border-radius:var(--radius-lg);padding:0 14px;
-  background:var(--card)}
+.phase-card{border:1px solid var(--line);border-radius:var(--radius-lg);padding:0 14px;background:var(--card)}
 .phase-card[open]{border-color:#bfdbfe}
 .phase-card summary{list-style:none;padding:12px 0;cursor:pointer;user-select:none}
 .phase-card summary::-webkit-details-marker{display:none}
@@ -722,8 +628,6 @@ button{font-family:inherit}
   text-transform:uppercase;letter-spacing:.05em}
 .phase-list{margin:0;padding-left:14px}
 .phase-list li{margin:5px 0;font-size:12px;color:var(--text-secondary)}
-
-/* ── timeline ── */
 .timeline-wrap .tl-track{position:relative;height:62px;margin-top:6px}
 .tl-line{position:absolute;top:24px;left:0;right:0;height:2px;background:var(--line);border-radius:1px}
 .tl-marker{position:absolute;top:0;transform:translateX(-50%);text-align:center}
@@ -733,25 +637,12 @@ button{font-family:inherit}
 .tl-lbl{font-size:10.5px;color:var(--muted);max-width:80px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
 .tl-today{position:absolute;top:0;transform:translateX(-50%)}
-.tl-today-line{width:2px;height:40px;background:var(--red);margin:0 auto;
-  border-radius:1px;opacity:.7}
-.tl-today-lbl{font-size:10px;font-weight:700;text-align:center;margin-top:3px;
-  color:var(--red)}
-
-/* ── footer ── */
-.footer{margin-top:32px;padding:18px 0 8px;border-top:1px solid var(--line);
-  text-align:center}
-.footer-brand{font-size:13px;font-weight:700;color:var(--text-secondary);
-  letter-spacing:.04em;margin-bottom:4px}
-.footer-tagline{font-size:11px;color:var(--muted-light);letter-spacing:.03em;
-  margin-bottom:4px}
+.tl-today-line{width:2px;height:40px;background:var(--red);margin:0 auto;border-radius:1px;opacity:.7}
+.tl-today-lbl{font-size:10px;font-weight:700;text-align:center;margin-top:3px;color:var(--red)}
+.footer{margin-top:32px;padding:18px 0 8px;border-top:1px solid var(--line);text-align:center}
+.footer-brand{font-size:13px;font-weight:700;color:var(--text-secondary);letter-spacing:.04em;margin-bottom:4px}
+.footer-tagline{font-size:11px;color:var(--muted-light);letter-spacing:.03em;margin-bottom:4px}
 .footer-copy{font-size:11px;color:var(--muted-light)}
-
-/* ── misc ── */
-.empty-box{padding:12px 14px;border:1px dashed var(--line);border-radius:var(--radius);
-  background:#f9fafb;color:var(--muted);font-size:13px}
-
-/* ── responsive ── */
 @media(max-width:1080px){
   .hero-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .phase-top{flex-direction:column;align-items:flex-start}
