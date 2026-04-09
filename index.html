@@ -259,7 +259,7 @@ button{font-family:inherit}
       <p>ARCBOS SnowBot — Project Board &nbsp;·&nbsp; Notion → GitHub Pages</p>
     </div>
     <div class="sync">
-      <strong>Last sync</strong><br>04/08周三 10:11<br>
+      <strong>Last sync</strong><br>04/09周四 10:16<br>
       <span style="opacity:.6;font-size:10px">https://board.arcbos.com</span>
     </div>
   </header>
@@ -277,8 +277,8 @@ button{font-family:inherit}
         <div class="hpc-num">1</div>
         <div class="hpc-lbl">🟠 逾期</div>
       </div>
-      <div class="hpc hpc--risk hpc--zero">
-        <div class="hpc-num">0</div>
+      <div class="hpc hpc--risk ">
+        <div class="hpc-num">1</div>
         <div class="hpc-lbl">🟡 风险</div>
       </div>
     </div>
@@ -297,7 +297,7 @@ button{font-family:inherit}
 <section class="section section--attention">
   <div class="section-hd">
     <div><h2>🚨 Needs Attention</h2><p>先处理这里，再看下方任务列表。</p></div>
-    <div class="section-count section-count--red">1</div>
+    <div class="section-count section-count--red">2</div>
   </div>
   <div class="attention-list">
 <a class="attention-item attention-item--overdue" href="https://notion.so/33995c292b0e809a96c1e7ea6b42d115" target="_blank" rel="noopener">
@@ -310,7 +310,19 @@ button{font-family:inherit}
       <span class="meta-tag">📅 2026/04/01</span>
     </div>
   </div>
-  <div class="attention-problem">已逾期 7 天</div>
+  <div class="attention-problem">已逾期 8 天</div>
+</a>
+<a class="attention-item attention-item--atrisk" href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">
+  <div class="attention-main">
+    <div class="attention-title">Motor torque validation <span class="task-code">MECH-001</span></div>
+    <div class="attention-meta">
+      <span class="badge badge--active">Active（进行中）</span> <span class="risk risk--atrisk">🟡 At Risk（风险）</span>
+      <span class="meta-tag">👤 Li Wei</span>
+      <span class="meta-tag">📁 Phase 1 — Prototype</span>
+      <span class="meta-tag">📅 2026/04/12</span>
+    </div>
+  </div>
+  <div class="attention-problem">即将到期（3 天内）</div>
 </a></div>
 </section>
   
@@ -351,20 +363,20 @@ button{font-family:inherit}
   <td class="col-phase">Phase 1 — Prototype</td>
   <td class="due--overdue">2026/04/01</td>
   <td><span class="risk risk--overdue">🟠 Overdue（逾期）</span></td>
-  <td class="problem-cell">已逾期 7 天</td>
+  <td class="problem-cell">已逾期 8 天</td>
 </tr>
 <tr class="task-row"
   data-status="active"
-  data-risk="active"
+  data-risk="atrisk"
   data-owner="li wei"
   data-search="motor torque validation mech-001 li wei phase 1 — prototype">
   <td class="col-task"><a class="task-link" href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation<span class="task-code">MECH-001</span></a></td>
   <td><span class="badge badge--active">Active（进行中）</span></td>
   <td><button class="owner-btn" data-owner-filter="li wei">Li Wei</button></td>
   <td class="col-phase">Phase 1 — Prototype</td>
-  <td class="">2026/04/12</td>
-  <td><span class="risk risk--active">🔵 Active（进行中）</span></td>
-  <td class="muted">—</td>
+  <td class="due--soon">2026/04/12</td>
+  <td><span class="risk risk--atrisk">🟡 At Risk（风险）</span></td>
+  <td class="problem-cell">即将到期（3 天内）</td>
 </tr>
 <tr class="task-row"
   data-status="active"
@@ -406,6 +418,16 @@ button{font-family:inherit}
     <div><h2>👤 By Owner</h2><p>点击负责人卡片过滤任务列表。有问题的负责人排在前面。</p></div>
   </div>
   <div class="owner-grid">
+<button class="owner-card owner-card--issue" data-owner-filter="li wei">
+  <div class="owner-name">👤 Li Wei</div>
+  <div class="owner-load">1 项活跃任务</div>
+  <div class="owner-stats">
+    
+    
+    
+    <span class="ostat ostat--risk">1 风险</span>
+  </div>
+</button>
 <button class="owner-card owner-card--issue" data-owner-filter="zhang san">
   <div class="owner-name">👤 Zhang San</div>
   <div class="owner-load">1 项活跃任务</div>
@@ -413,16 +435,6 @@ button{font-family:inherit}
     
     
     <span class="ostat ostat--overdue">1 逾期</span>
-    
-  </div>
-</button>
-<button class="owner-card " data-owner-filter="li wei">
-  <div class="owner-name">👤 Li Wei</div>
-  <div class="owner-load">1 项活跃任务</div>
-  <div class="owner-stats">
-    <span class="ostat ostat--active">1 进行中</span>
-    
-    
     
   </div>
 </button>
@@ -451,7 +463,7 @@ button{font-family:inherit}
         <div class="phase-meta">
           <span class="badge badge--active">Active（进行中）</span>
           <span class="muted">2026/04/01 — 2026/05/31</span>
-          <span class="muted">53 天后截止</span>
+          <span class="muted">52 天后截止</span>
         </div>
         <div class="phase-task-summary">1/4 完成 · 3 进行中</div>
       </div>
