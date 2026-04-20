@@ -259,7 +259,7 @@ button{font-family:inherit}
       <p>ARCBOS SnowBot — Project Board &nbsp;·&nbsp; Notion → GitHub Pages</p>
     </div>
     <div class="sync">
-      <strong>Last sync</strong><br>04/20周一 10:53<br>
+      <strong>Last sync</strong><br>04/20周一 11:10<br>
       <span style="opacity:.6;font-size:10px">https://board.arcbos.com</span>
     </div>
   </header>
@@ -273,8 +273,8 @@ button{font-family:inherit}
         <div class="hpc-num">0</div>
         <div class="hpc-lbl">🔴 阻塞</div>
       </div>
-      <div class="hpc hpc--overdue ">
-        <div class="hpc-num">1</div>
+      <div class="hpc hpc--overdue hpc--zero">
+        <div class="hpc-num">0</div>
         <div class="hpc-lbl">🟠 逾期</div>
       </div>
       <div class="hpc hpc--risk hpc--zero">
@@ -282,42 +282,23 @@ button{font-family:inherit}
         <div class="hpc-lbl">🟡 风险</div>
       </div>
     </div>
-    
+    <div class="hero-all-clear">✅ 当前执行正常，无需立即处理</div>
   </div>
   <div class="hero-secondary">
-    <span class="hsc"><span class="hsc-num">1</span><span class="hsc-lbl">进行中</span></span>
+    <span class="hsc"><span class="hsc-num">0</span><span class="hsc-lbl">进行中</span></span>
     <span class="hsc-sep">·</span>
-    <span class="hsc"><span class="hsc-num">3</span><span class="hsc-lbl">已完成</span></span>
+    <span class="hsc"><span class="hsc-num">4</span><span class="hsc-lbl">已完成</span></span>
     <span class="hsc-sep">·</span>
     <span class="hsc"><span class="hsc-num">4</span><span class="hsc-lbl">总计</span></span>
     
   </div>
 </div>
   
-<section class="section section--attention">
-  <div class="section-hd">
-    <div><h2>🚨 Needs Attention</h2><p>先处理这里，再看下方任务列表。</p></div>
-    <div class="section-count section-count--red">1</div>
-  </div>
-  <div class="attention-list">
-<a class="attention-item attention-item--overdue" href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">
-  <div class="attention-main">
-    <div class="attention-title">Motor torque validation <span class="task-code">MECH-001</span></div>
-    <div class="attention-meta">
-      <span class="badge badge--active">Active（进行中）</span> <span class="risk risk--overdue">🟠 Overdue（逾期）</span>
-      <span class="meta-tag">👤 Li Wei</span>
-      <span class="meta-tag">📁 Phase 1 — Prototype</span>
-      <span class="meta-tag">📅 2026/04/12</span>
-    </div>
-  </div>
-  <div class="attention-problem">已逾期 8 天</div>
-</a></div>
-</section>
   
 <section class="section">
   <div class="section-hd">
     <div><h2>📋 Task List</h2><p>问题任务排在最前，点击负责人过滤。已完成默认折叠。</p></div>
-    <div class="section-count" id="taskCount">1</div>
+    <div class="section-count" id="taskCount">0</div>
   </div>
   <div class="controls-bar" style="margin-bottom:10px">
     <div class="filter-group">
@@ -340,24 +321,11 @@ button{font-family:inherit}
       </thead>
       <tbody id="taskTableBody">
         
-<tr class="task-row"
-  data-status="active"
-  data-risk="overdue"
-  data-owner="li wei"
-  data-search="motor torque validation mech-001 li wei phase 1 — prototype">
-  <td class="col-task"><a class="task-link" href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation<span class="task-code">MECH-001</span></a></td>
-  <td><span class="badge badge--active">Active（进行中）</span></td>
-  <td><button class="owner-btn" data-owner-filter="li wei">Li Wei</button></td>
-  <td class="col-phase">Phase 1 — Prototype</td>
-  <td class="due--overdue">2026/04/12</td>
-  <td><span class="risk risk--overdue">🟠 Overdue（逾期）</span></td>
-  <td class="problem-cell">已逾期 8 天</td>
-</tr>
         
 <tr class="done-toggle-row" id="doneToggleRow">
   <td colspan="7">
     <button class="done-toggle" id="doneToggleBtn" onclick="toggleDone()">
-      ▶ 显示已完成任务（3 项）
+      ▶ 显示已完成任务（4 项）
     </button>
   </td>
 </tr>
@@ -367,6 +335,14 @@ button{font-family:inherit}
   <td><button class="owner-btn" data-owner-filter="zhang san">Zhang San</button></td>
   <td class="col-phase">Phase 1 — Prototype</td>
   <td>2026/04/01</td>
+  <td><span class="risk risk--done">🟢 Done（已完成）</span></td>
+  <td class="muted">—</td>
+</tr><tr class="task-row done-row" data-status="done" data-risk="done" data-owner="li wei" data-search="motor torque validation mech-001 li wei phase 1 — prototype" style="display:none">
+  <td class="col-task"><a class="task-link" href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation<span class="task-code">MECH-001</span></a></td>
+  <td><span class="badge badge--done">Done（已完成）</span></td>
+  <td><button class="owner-btn" data-owner-filter="li wei">Li Wei</button></td>
+  <td class="col-phase">Phase 1 — Prototype</td>
+  <td>2026/04/12</td>
   <td><span class="risk risk--done">🟢 Done（已完成）</span></td>
   <td class="muted">—</td>
 </tr><tr class="task-row done-row" data-status="done" data-risk="done" data-owner="andy" data-search="test blocker cleanup test-001 andy phase 1 — prototype" style="display:none">
@@ -391,22 +367,6 @@ button{font-family:inherit}
   </div>
 </section>
   
-<section class="section">
-  <div class="section-hd">
-    <div><h2>👤 By Owner</h2><p>点击负责人卡片过滤任务列表。有问题的负责人排在前面。</p></div>
-  </div>
-  <div class="owner-grid">
-<button class="owner-card owner-card--issue" data-owner-filter="li wei">
-  <div class="owner-name">👤 Li Wei</div>
-  <div class="owner-load">1 项活跃任务</div>
-  <div class="owner-stats">
-    
-    
-    <span class="ostat ostat--overdue">1 逾期</span>
-    
-  </div>
-</button></div>
-</section>
   
 <section class="section">
   <div class="section-hd">
@@ -423,19 +383,19 @@ button{font-family:inherit}
           <span class="muted">2026/04/01 — 2026/05/31</span>
           <span class="muted">41 天后截止</span>
         </div>
-        <div class="phase-task-summary">3/4 完成 · 1 进行中</div>
+        <div class="phase-task-summary">4/4 完成 · 0 进行中</div>
       </div>
       <div class="phase-right">
-        <div class="phase-percent">75%</div>
+        <div class="phase-percent">99%</div>
         <div class="prog-track">
-          <div class="prog-fill prog-fill--active" style="width:75%"></div>
+          <div class="prog-fill prog-fill--active" style="width:99%"></div>
         </div>
       </div>
     </div>
   </summary>
   <div class="phase-body">
     <div class="phase-col"><h4>Milestones</h4><ul class="phase-list"><li><span class="badge badge--active">Active（进行中）</span> Chassis design v2 <span class="muted">2026/04/10</span></li></ul></div>
-    <div class="phase-col"><h4>Tasks</h4><ul class="phase-list"><li><span class="badge badge--active">Active（进行中）</span> <a href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation</a></li><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e805fb07be0cd4b3befd5" target="_blank" rel="noopener">EMI testing</a></li><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e809a96c1e7ea6b42d115" target="_blank" rel="noopener">Sensor calibration</a></li><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e8018a57ecdc9251b6b63" target="_blank" rel="noopener">Test blocker cleanup</a></li></ul></div>
+    <div class="phase-col"><h4>Tasks</h4><ul class="phase-list"><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e80deb00cc83dee82f992" target="_blank" rel="noopener">Motor torque validation</a></li><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e805fb07be0cd4b3befd5" target="_blank" rel="noopener">EMI testing</a></li><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e809a96c1e7ea6b42d115" target="_blank" rel="noopener">Sensor calibration</a></li><li><span class="badge badge--done">Done（已完成）</span> <a href="https://notion.so/33995c292b0e8018a57ecdc9251b6b63" target="_blank" rel="noopener">Test blocker cleanup</a></li></ul></div>
   </div>
 </details></div>
 </section>
@@ -450,7 +410,7 @@ button{font-family:inherit}
     </div><div class="tl-marker tl-phase" style="left:97%" title="Phase 1 — Prototype — 2026/05/31">
       <div class="tl-dot"></div><div class="tl-lbl">Phase 1 — Pr…</div>
     </div>
-    <div class="tl-today" style="left:22.267272818173566%">
+    <div class="tl-today" style="left:22.28937410312273%">
       <div class="tl-today-line"></div>
       <div class="tl-today-lbl">Today</div>
     </div>
